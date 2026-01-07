@@ -5,8 +5,13 @@ export const testService = {
         const response = await api.get("/ping")
         return response.data
     },
-    callSimplipy: async () => {
-        const response = await api.get("/simplipy")
+    callLlamaTest: async () => {
+        const response = await api.get("/llama_test")
+        return response.data;
+    },
+    callSimplipy: async (input: string) => {
+        console.log(input)
+        const response = await api.post("/simplipy", { input: input });
         return response.data;
     }
 }

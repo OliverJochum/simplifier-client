@@ -1,5 +1,4 @@
 import React, { use } from 'react';
-import logo from './logo.svg';
 import { useEffect, useState } from "react";
 import { testService } from "./services/testservice";
 import './App.css';
@@ -13,7 +12,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    testService.callSimplipy().then(res => setSimplipyData(res));
+    testService.callLlamaTest().then(res => setSimplipyData(res));
   }, []);
 
   return (
