@@ -1,19 +1,25 @@
-import React from 'react';
+import React, { use } from 'react';
 import logo from './logo.svg';
 import { useEffect, useState } from "react";
 import { testService } from "./services/testservice";
 import './App.css';
 
 function App() {
-  const [data, setData] = useState<string>("Loading...");
+  const [pingdata, setPingData] = useState<string>("Loading...");
+  const [simplipydata, setSimplipyData] = useState<string>("Loading...");
 
   useEffect(() => {
-    testService.ping().then(res => setData(res));
+    testService.ping().then(res => setPingData(res));
+  }, []);
+
+  useEffect(() => {
+    testService.callSimplipy().then(res => setSimplipyData(res));
   }, []);
 
   return (
     <div>
-      <p>{data}</p>
+      <p>Ping data: {pingdata}</p>
+      <p>Simplipy data: {simplipydata}</p>
     </div>
   );
 }
