@@ -6,7 +6,7 @@ function Simplifier() {
     const [outputText, setOutputText] = useState(""); 
 
     const handleSimplify = () => {
-        testService.callSimplipy(inputText).then(res => setOutputText(res));
+        testService.callSimplipy(inputText, "openai").then(res => setOutputText(res));
     };
     return (
         <div>
