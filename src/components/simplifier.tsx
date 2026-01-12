@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { testService } from "../services/testservice";
+import { simplifyService } from "../services/simplify_service";
+
 
 function Simplifier() {
     const [inputText, setInputText] = useState("");   
     const [outputText, setOutputText] = useState(""); 
 
     const handleSimplify = () => {
-        testService.callSimplipy(inputText, "openai").then(res => setOutputText(res));
+        simplifyService.callSimplifyGenTxt(inputText, "openai").then(res => setOutputText(res));
     };
     return (
         <div>
