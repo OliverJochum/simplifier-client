@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { testService } from "../services/testservice";
 import { simplifyService } from "../services/simplify_service";
+import Box from "@mui/material/Box";
+import IOTextBox from "./iotextbox";
+import Grid from "@mui/material/Grid";
 
 
 function Simplifier() {
@@ -10,11 +13,18 @@ function Simplifier() {
     const handleSimplify = () => {
         simplifyService.callSimplifyGenTxt(inputText, "openai").then(res => setOutputText(res));
     };
+    
     return (
         <div>
             <div>
-                <textarea id="inputText" value={inputText} onChange={(e) => setInputText(e.target.value)} rows={5} cols={50} placeholder="Type text here..."></textarea>
-                <textarea id="outputText" value={outputText} onChange={(e) => setOutputText(e.target.value)} rows={5} cols={50} placeholder="Type text here..."></textarea>
+                <Grid container spacing={1} sx={{ marginBottom: 1 }}>
+                    <Grid size={6}>
+                        <IOTextBox text={inputText} onSentenceSelect={undefined} />
+                    </Grid>
+                    <Grid size={6}>
+                        <IOTextBox text={outputText} onSentenceSelect={undefined} />
+                    </Grid>
+                </Grid>
             </div>
             <button id="simplifyButton" onClick={handleSimplify}>Simplify</button>
         </div>
