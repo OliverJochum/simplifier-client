@@ -1,14 +1,16 @@
 import Box from '@mui/material/Box';
 import TextareaAutosize from '@mui/material/TextareaAutosize';
-import { use, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type IOTextBoxProps = {
+    onTextChange?: (value: string) => void;
+    setTextFromParent?: (setter: (val: string) => void) => void;
 }
 
 const MATCH_WORD_REGEX = /\b[\p{L}\p{N}']+\b/gu;
 const MATCH_SENTENCE_REGEX = /[^.!?]+[.!?]*/g;
 
-function IOTextBox({ }: IOTextBoxProps) {
+function IOTextBox({ onTextChange, setTextFromParent }: IOTextBoxProps) {
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
     const overlayRef = useRef<HTMLDivElement>(null);
     const [text, setText] = useState("");
@@ -97,11 +99,21 @@ function IOTextBox({ }: IOTextBoxProps) {
         setHighlightedSentence(selectedSentence);
     }, [selectedSentenceIndex, sentences, text]);
 
-    // on text change, update words and sentences
+    // on text change, update words and sentences, and notify parent
     useEffect(() => {
         setWords(text.match(MATCH_WORD_REGEX) || []);
         setSentences(text.match(MATCH_SENTENCE_REGEX) || []);
-    }, [text]);
+        if (onTextChange) {
+            onTextChange(text);
+        }
+    }, [text, onTextChange]);
+
+    // allow parent to set text (output box user case)
+    useEffect(() => {
+        if (setTextFromParent) {
+        setTextFromParent(setText);
+        }
+    }, [setTextFromParent]);
 
     // debugging crap
     // useEffect(() => {
