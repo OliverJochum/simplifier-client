@@ -1,6 +1,12 @@
 import Box from '@mui/material/Box';
 import TextareaAutosize from '@mui/material/TextareaAutosize';
-import { use, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { SentencePopper } from './sentencepopper';
+import getCaretCoordinates from 'textarea-caret';
+
+export type VirtualAnchor = {
+    getBoundingClientRect: () => DOMRect;
+};
 
 type IOTextBoxProps = {
     onTextChange?: (value: string) => void;
@@ -27,6 +33,8 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, sente
         start: 0,
         end: 0,
     });
+    const [suggestedSentences, setSuggestedSentences] = useState<string[]>([]);
+    const [anchorEl, setAnchorEl] = useState<VirtualAnchor | null>(null);
 
     // match scroll positions of textarea and overlay
     const syncScroll = () => {
@@ -109,7 +117,7 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, sente
             const sentence = sentences[selectedSentenceIndex];
             if (sentence) {
                 sentenceAPICallback(sentence, model).then(res => {
-                    console.log("Suggestions for sentence:", res);
+                    setSuggestedSentences(JSON.parse(res.replace(/'/g, '"')));
                 }).catch(err => {
                     console.error("Error fetching sentence suggestions:", err);
                 });
@@ -141,6 +149,29 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, sente
     //     console.log("Selected sentence:", sentences[selectedSentenceIndex ?? -1]);
     // }, [selectedSentenceIndex, selectedWordIndex, sentences, words]);
 
+    function updateAnchor() {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+
+        const caret = textarea.selectionEnd;
+        if (caret == null) return;
+
+        const coords = getCaretCoordinates(textarea, caret);
+
+        setAnchorEl({
+            getBoundingClientRect: () =>
+                new DOMRect(
+                    coords.left + textarea.getBoundingClientRect().left + window.scrollX,
+                    coords.top +
+                        textarea.getBoundingClientRect().top +
+                        coords.height +
+                        window.scrollY,
+                    0,
+                    0
+                ),
+        });
+    }
+
     const sharedStyles = {
         width: "100%",
         padding: "8px",
@@ -153,71 +184,74 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, sente
 
 
     return (
-        <Box position="relative" width="400px">
-        {/* Highlight layer */}
-        <Box
-            component="div"
-            sx={{
+        <>
+            <Box position="relative" width="400px">
+            {/* Highlight layer */}
+            <Box
+                component="div"
+                sx={{
+                    ...sharedStyles,
+                    // debugging
+                    // color: "rgba(0,0,0,0.2)",
+                    // background: "rgba(255,0,0,0.05)",
+                    overflowWrap: "break-word",
+                    boxSizing: "border-box",
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    color: "transparent",
+                    pointerEvents: "none",
+                }}
+                dangerouslySetInnerHTML={{ __html: highlightedSentence }}
+            />
+            <Box
+                component="div"
+                sx={{
+                    ...sharedStyles,
+                    // debugging
+                    // color: "rgba(0,0,0,0.2)",
+                    // background: "rgba(255,0,0,0.05)",
+                    overflowWrap: "break-word",
+                    boxSizing: "border-box",
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    color: "transparent",
+                    pointerEvents: "none",
+                }}
+                dangerouslySetInnerHTML={{ __html: highlightedWord }}
+            />
+            {/* Textarea layer */}
+            <TextareaAutosize
+            ref={textareaRef}
+            minRows={20}
+            maxRows={40}
+            style={{
                 ...sharedStyles,
-                // debugging
-                // color: "rgba(0,0,0,0.2)",
-                // background: "rgba(255,0,0,0.05)",
-                overflowWrap: "break-word",
                 boxSizing: "border-box",
-                position: "absolute",
-                top: 0,
-                left: 0,
-                color: "transparent",
-                pointerEvents: "none",
-            }}
-            dangerouslySetInnerHTML={{ __html: highlightedSentence }}
-        />
-        <Box
-            component="div"
-            sx={{
-                ...sharedStyles,
-                // debugging
-                // color: "rgba(0,0,0,0.2)",
-                // background: "rgba(255,0,0,0.05)",
                 overflowWrap: "break-word",
-                boxSizing: "border-box",
-                position: "absolute",
-                top: 0,
-                left: 0,
-                color: "transparent",
-                pointerEvents: "none",
+                background: "transparent",
+                position: "relative",
+                zIndex: 1,
             }}
-            dangerouslySetInnerHTML={{ __html: highlightedWord }}
-        />
-        {/* Textarea layer */}
-        <TextareaAutosize
-        ref={textareaRef}
-        minRows={20}
-        maxRows={40}
-        style={{
-            ...sharedStyles,
-            boxSizing: "border-box",
-            overflowWrap: "break-word",
-            background: "transparent",
-            position: "relative",
-            zIndex: 1,
-        }}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onSelect={updateCursor}
-        onKeyUp={updateCursor}
-        onMouseUp={updateCursor}
-        onScroll={syncScroll}
-        />
-        <style>{`
-            .highlight-word {
-                background-color: rgba(255, 235, 59, 0.4);
-            }
-            .highlight-sentence {
-                background-color: rgba(255, 193, 7, 0.4);
-            }`}
-        </style>
-    </Box>
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onSelect={updateCursor}
+            onKeyUp={() => { updateCursor(); updateAnchor(); }}
+            onMouseUp={() => { updateCursor(); updateAnchor(); }}
+            onScroll={syncScroll}
+            />
+            <style>{`
+                .highlight-word {
+                    background-color: rgba(255, 235, 59, 0.4);
+                }
+                .highlight-sentence {
+                    background-color: rgba(255, 193, 7, 0.4);
+                }`}
+            </style>
+        </Box>
+        <SentencePopper sentences={suggestedSentences} hidden={suggestedSentences.length === 0} anchorEl={anchorEl} />
+    </>
     );
 }
 
