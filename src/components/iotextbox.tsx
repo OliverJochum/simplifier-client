@@ -5,8 +5,10 @@ import { use, useEffect, useRef, useState } from 'react';
 type IOTextBoxProps = {
 }
 
-function IOTextBox({ }: IOTextBoxProps) {
+const MATCH_WORD_REGEX = /\b[\p{L}\p{N}']+\b/gu;
+const MATCH_SENTENCE_REGEX = /[^.!?]+[.!?]*/g;
 
+function IOTextBox({ }: IOTextBoxProps) {
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
     const overlayRef = useRef<HTMLDivElement>(null);
     const [text, setText] = useState("");
@@ -15,6 +17,7 @@ function IOTextBox({ }: IOTextBoxProps) {
     const [words, setWords] = useState<string[]>([]);
     const [selectedWordIndex, setSelectedWordIndex] = useState<number | null>(null);
     const [highlightedWord, setHighlightedWord] = useState("");
+    const [highlightedSentence, setHighlightedSentence] = useState("");
     const [cursor, setCursor] = useState({
         start: 0,
         end: 0,
@@ -39,7 +42,6 @@ function IOTextBox({ }: IOTextBoxProps) {
 
     // on cursor position change
     useEffect(() => {
-        console.log("Cursor updated:", cursor);
         // select word by getting index from cursor position
         // Slice text between beginning and where text cursor is, split text into array by spaces, get length of array - 1
         // Since word is last element in sliced array, pos in total text is length - 1
@@ -54,7 +56,7 @@ function IOTextBox({ }: IOTextBoxProps) {
     useEffect(() => {
         // replace selected word in text with highlighted version
         const selectedWord = text.replace(
-            /\b[\p{L}\p{N}']+\b/gu, // by using this regex, text can be split into words (arr of matches) NOTE: could make this constant
+            MATCH_WORD_REGEX, // by using this regex, text can be split into words (arr of matches) NOTE: could make this constant
             // then, per match
             (match, _offset, full) => {
                 // get index of current word by checking how many words are before it in full text
@@ -66,11 +68,11 @@ function IOTextBox({ }: IOTextBoxProps) {
                 // ex. 1st match -> slice(0, 5) -> ["Hello"] -> length 1
                 const index = (full
                 .slice(0, _offset)
-                .match(/\b[\p{L}\p{N}']+\b/gu)?.length ?? 0);
+                .match(MATCH_WORD_REGEX)?.length ?? 0); // edge case: if no words are before current match, current match must be index 0
                 
                 // highlight if index of current word matches selectedWordIndex
                 return index === selectedWordIndex
-                ? `<span class="highlight">${match}</span>`
+                ? `<span class="highlight-word">${match}</span>`
                 : match;
             }
         );
@@ -78,33 +80,36 @@ function IOTextBox({ }: IOTextBoxProps) {
         setHighlightedWord(selectedWord);
     }, [selectedWordIndex, text, words]);
 
-    // on selected sentence change
+    // on selected sentence change - same logic as word highlighting, different regex
     useEffect(() => {
-        if (selectedSentenceIndex === null || selectedSentenceIndex < 0 || selectedSentenceIndex >= sentences.length) {
-            console.log("No sentence selected");
-            return;
-        }
-        const selectedSentence = sentences[selectedSentenceIndex];
-        console.log("Selected sentence index:", selectedSentenceIndex);
-        console.log("Selected sentence:", selectedSentence);
-    }, [selectedSentenceIndex, sentences]);
+        const selectedSentence = text.replace(
+            MATCH_SENTENCE_REGEX, 
+            (match, _offset, full) => {
+                const index = (full
+                .slice(0, _offset)
+                .match(MATCH_SENTENCE_REGEX)?.length ?? 0); 
+
+                return index === selectedSentenceIndex
+                ? `<span class="highlight-sentence">${match}</span>`
+                : match;
+            }
+        );
+        setHighlightedSentence(selectedSentence);
+    }, [selectedSentenceIndex, sentences, text]);
 
     // on text change, update words and sentences
     useEffect(() => {
-        setWords(text.match(/\b[\p{L}\p{N}']+\b/gu) || []);
-        setSentences(text.replace(/\n+/g, " ").split(/(?<=[.!?])\s+/));
+        setWords(text.match(MATCH_WORD_REGEX) || []);
+        setSentences(text.match(MATCH_SENTENCE_REGEX) || []);
     }, [text]);
 
-    // on words change
-    useEffect(() => {
-        console.log("Words updated:", words);
-
-    }, [words]);
-
-    // on sentences change
-    useEffect(() => {
-        console.log("Sentences updated:", sentences);
-    }, [sentences]);
+    // debugging crap
+    // useEffect(() => {
+    //     console.log("Words updated:", words);
+    //     console.log("Sentences updated:", sentences);
+    //     console.log("Selected word:", words[selectedWordIndex ?? -1]);
+    //     console.log("Selected sentence:", sentences[selectedSentenceIndex ?? -1]);
+    // }, [selectedSentenceIndex, selectedWordIndex, sentences, words]);
 
     const sharedStyles = {
         width: "100%",
@@ -135,9 +140,26 @@ function IOTextBox({ }: IOTextBoxProps) {
                 color: "transparent",
                 pointerEvents: "none",
             }}
+            dangerouslySetInnerHTML={{ __html: highlightedSentence }}
+        />
+        <Box
+            component="div"
+            sx={{
+                ...sharedStyles,
+                // debugging
+                // color: "rgba(0,0,0,0.2)",
+                // background: "rgba(255,0,0,0.05)",
+                overflowWrap: "break-word",
+                boxSizing: "border-box",
+                position: "absolute",
+                top: 0,
+                left: 0,
+                color: "transparent",
+                pointerEvents: "none",
+            }}
             dangerouslySetInnerHTML={{ __html: highlightedWord }}
         />
-
+        {/* Textarea layer */}
         <TextareaAutosize
         ref={textareaRef}
         minRows={20}
@@ -158,8 +180,11 @@ function IOTextBox({ }: IOTextBoxProps) {
         onScroll={syncScroll}
         />
         <style>{`
-            .highlight {
+            .highlight-word {
                 background-color: rgba(255, 235, 59, 0.4);
+            }
+            .highlight-sentence {
+                background-color: rgba(255, 193, 7, 0.4);
             }`}
         </style>
     </Box>
