@@ -32,10 +32,10 @@ function Simplifier() {
             <div>
                 <Grid container spacing={1} sx={{ marginBottom: 1 }}>
                     <Grid size={6}>
-                        <IOTextBox onTextChange={setInputText}/>
+                        <IOTextBox onTextChange={setInputText} sentenceAPICallback={simplifyService.callSimplifySentenceSimplify} sentenceSuggestEnabled model="openai" />
                     </Grid>
                     <Grid size={6}>
-                        <IOTextBox setTextFromParent={(setter: (val: string) => void) => {outputSetterRef.current = setter; }} />
+                        <IOTextBox setTextFromParent={(setter: (val: string) => void) => {outputSetterRef.current = setter; }} sentenceAPICallback={simplifyService.callSimplifySentenceSuggest} sentenceSuggestEnabled model="openai" />
                     </Grid>
                 </Grid>
             </div>

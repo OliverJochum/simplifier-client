@@ -1,16 +1,19 @@
 import Box from '@mui/material/Box';
 import TextareaAutosize from '@mui/material/TextareaAutosize';
-import { useEffect, useRef, useState } from 'react';
+import { use, useEffect, useRef, useState } from 'react';
 
 type IOTextBoxProps = {
     onTextChange?: (value: string) => void;
     setTextFromParent?: (setter: (val: string) => void) => void;
+    sentenceAPICallback?: (input: string, selected_service: string) => Promise<any>;
+    sentenceSuggestEnabled?: boolean;
+    model?: string;
 }
 
 const MATCH_WORD_REGEX = /\b[\p{L}\p{N}']+\b/gu;
 const MATCH_SENTENCE_REGEX = /[^.!?]+[.!?]*/g;
 
-function IOTextBox({ onTextChange, setTextFromParent }: IOTextBoxProps) {
+function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, sentenceSuggestEnabled, model }: IOTextBoxProps) {
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
     const overlayRef = useRef<HTMLDivElement>(null);
     const [text, setText] = useState("");
@@ -97,7 +100,22 @@ function IOTextBox({ onTextChange, setTextFromParent }: IOTextBoxProps) {
             }
         );
         setHighlightedSentence(selectedSentence);
+
     }, [selectedSentenceIndex, sentences, text]);
+
+    // if sentence suggestion enabled, call sentence suggestion API
+    useEffect(() => {
+        if (sentenceSuggestEnabled && sentenceAPICallback && selectedSentenceIndex !== null && model !== undefined) {
+            const sentence = sentences[selectedSentenceIndex];
+            if (sentence) {
+                sentenceAPICallback(sentence, model).then(res => {
+                    console.log("Suggestions for sentence:", res);
+                }).catch(err => {
+                    console.error("Error fetching sentence suggestions:", err);
+                });
+            }
+        }
+    }, [sentenceSuggestEnabled, sentenceAPICallback, selectedSentenceIndex, sentences, model]);
 
     // on text change, update words and sentences, and notify parent
     useEffect(() => {
