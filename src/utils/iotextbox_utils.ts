@@ -1,4 +1,4 @@
-import { MATCH_SENTENCE_REGEX, MATCH_WORD_REGEX } from "../constants";
+import { MATCH_SENTENCE_REGEX, MATCH_WORD_REGEX } from "./constants";
 
 export const IOTextBoxUtils = {
         

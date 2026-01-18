@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { SentencePopper } from './sentencepopper';
 import getCaretCoordinates from 'textarea-caret';
 import { IOTextBoxUtils } from '../utils/iotextbox_utils';
-import { MATCH_WORD_REGEX, MATCH_SENTENCE_REGEX } from '../constants';
+import { MATCH_WORD_REGEX, MATCH_SENTENCE_REGEX } from '../utils/constants';
 
 export type VirtualAnchor = {
     getBoundingClientRect: () => DOMRect;
