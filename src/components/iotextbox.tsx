@@ -1,10 +1,11 @@
 import Box from '@mui/material/Box';
 import TextareaAutosize from '@mui/material/TextareaAutosize';
-import { useEffect, useRef, useState } from 'react';
+import { use, useEffect, useRef, useState } from 'react';
 import { SentencePopper } from './sentencepopper';
 import getCaretCoordinates from 'textarea-caret';
 import { IOTextBoxUtils } from '../utils/iotextbox_utils';
 import { MATCH_WORD_REGEX, MATCH_SENTENCE_REGEX } from '../utils/constants';
+import OptionManager from '../services/option_manager';
 
 export type VirtualAnchor = {
     getBoundingClientRect: () => DOMRect;
@@ -14,25 +15,38 @@ type IOTextBoxProps = {
     onTextChange?: (value: string) => void;
     setTextFromParent?: (setter: (val: string) => void) => void;
     sentenceAPICallback?: (input: string, selected_service: string) => Promise<any>;
-    sentenceSuggestEnabled?: boolean;
     model?: string;
+    optionManager?: OptionManager;
 }
 
-function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, sentenceSuggestEnabled, model }: IOTextBoxProps) {
+/**
+ * Input / Output text box component 
+ * @param onTextChange Callback when text changes
+ * @param setTextFromParent Function to allow parent to set text
+ * @param sentenceAPICallback Callback to fetch sentence suggestions/simplifications
+ * @param model AI Model to use for sentence suggestions/simplifications
+ * @param optionManager OptionManager to get settings from Option vertical bar
+ * @return IOTextBox component
+ */
+function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, model, optionManager }: IOTextBoxProps) {
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
     const overlayRef = useRef<HTMLDivElement>(null);
+
     const [text, setText] = useState("");
+
     const [sentences, setSentences] = useState<string[]>([]);
     const [selectedSentenceIndex, setSelectedSentenceIndex] = useState<number | null>(null);
+    const [highlightedSentence, setHighlightedSentence] = useState("");
+    const [suggestedSentences, setSuggestedSentences] = useState<string[]>([]);
+
     const [words, setWords] = useState<string[]>([]);
     const [selectedWordIndex, setSelectedWordIndex] = useState<number | null>(null);
     const [highlightedWord, setHighlightedWord] = useState("");
-    const [highlightedSentence, setHighlightedSentence] = useState("");
+
     const [cursor, setCursor] = useState({
         start: 0,
         end: 0,
     });
-    const [suggestedSentences, setSuggestedSentences] = useState<string[]>([]);
     const [anchorEl, setAnchorEl] = useState<VirtualAnchor | null>(null);
 
     // match scroll positions of textarea and overlay
@@ -76,7 +90,7 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, sente
 
     // if sentence suggestion enabled, call sentence suggestion API
     useEffect(() => {
-        if (sentenceSuggestEnabled && sentenceAPICallback && selectedSentenceIndex !== null && model !== undefined) {
+        if (optionManager?.isSentenceSuggestEnabled() && sentenceAPICallback && selectedSentenceIndex !== null && model !== undefined) {
             const sentence = sentences[selectedSentenceIndex];
             if (sentence) {
                 sentenceAPICallback(sentence, model).then(res => {
@@ -86,7 +100,7 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, sente
                 });
             }
         }
-    }, [sentenceSuggestEnabled, sentenceAPICallback, selectedSentenceIndex, sentences, model]);
+    }, [sentenceAPICallback, selectedSentenceIndex, sentences, model, optionManager]);
 
     // on text change, update words and sentences, and notify parent
     useEffect(() => {
@@ -141,7 +155,11 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, sente
         sentences[selectedSentenceIndex] = newSentence;
         const newText = sentences.join(" ");
         setText(newText);
-        setSuggestedSentences([]);
+
+        setSelectedWordIndex(text.slice(0, cursor.start).split(/\s+/).length - 1);
+        setSelectedSentenceIndex(text.slice(0, cursor.start).split(/[.!?]/g).length - 1);
+        IOTextBoxUtils.highlightWord(newText, selectedWordIndex);
+        IOTextBoxUtils.highlightSentence(newText, selectedSentenceIndex);
     }
 
     const sharedStyles = {

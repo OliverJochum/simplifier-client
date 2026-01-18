@@ -1,10 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { simplifyService } from "../services/simplify_service";
 import IOTextBox from "./iotextbox";
 import Grid from "@mui/material/Grid";
+import OptionManager from "../services/option_manager";
 
+type SimplifierProps = {
+    optionManager?: OptionManager;
+}
 
-function Simplifier() {
+function Simplifier({ optionManager }: SimplifierProps) {
     const [inputText, setInputText] = useState("");   
     const outputSetterRef = useRef<(val: string) => void>(() => {});
     
@@ -32,10 +36,10 @@ function Simplifier() {
             <div>
                 <Grid container spacing={1} sx={{ marginBottom: 1 }}>
                     <Grid size={6}>
-                        <IOTextBox onTextChange={setInputText} sentenceAPICallback={simplifyService.callSimplifySentenceSimplify} sentenceSuggestEnabled model="openai" />
+                        <IOTextBox onTextChange={setInputText} sentenceAPICallback={simplifyService.callSimplifySentenceSimplify} model="openai" optionManager={optionManager} />
                     </Grid>
                     <Grid size={6}>
-                        <IOTextBox setTextFromParent={(setter: (val: string) => void) => {outputSetterRef.current = setter; }} sentenceAPICallback={simplifyService.callSimplifySentenceSuggest} sentenceSuggestEnabled model="openai" />
+                        <IOTextBox setTextFromParent={(setter: (val: string) => void) => {outputSetterRef.current = setter; }} sentenceAPICallback={simplifyService.callSimplifySentenceSuggest} model="openai" optionManager={optionManager} />
                     </Grid>
                 </Grid>
             </div>
