@@ -172,6 +172,15 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, sente
         });
     }
 
+    function replaceSelectedSentence(newSentence: string) {
+        if (selectedSentenceIndex === null) return;
+
+        sentences[selectedSentenceIndex] = newSentence;
+        const newText = sentences.join(" ");
+        setText(newText);
+        setSuggestedSentences([]);
+    }
+
     const sharedStyles = {
         width: "100%",
         padding: "8px",
@@ -250,7 +259,7 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, sente
                 }`}
             </style>
         </Box>
-        <SentencePopper sentences={suggestedSentences} hidden={suggestedSentences.length === 0} anchorEl={anchorEl} />
+        <SentencePopper sentences={suggestedSentences} hidden={suggestedSentences.length === 0} anchorEl={anchorEl} onSentenceClick={(sentence) => {replaceSelectedSentence(sentence);}}/>
     </>
     );
 }
