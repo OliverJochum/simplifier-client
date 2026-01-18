@@ -7,7 +7,7 @@ import OptionManager from '../services/option_manager';
 
 
 function MainView() {
-    const optionManager = new OptionManager({ sentenceSuggestEnabled: false });
+    const optionManager = new OptionManager({ sentenceSuggestEnabled: false, synonymModeEnabled: false });
 
     return (
         <Box sx={{ flexGrow: 1, padding: 2 }}>

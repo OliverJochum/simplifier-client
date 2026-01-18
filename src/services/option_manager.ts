@@ -1,11 +1,14 @@
 type OptionManagerProps = {
     sentenceSuggestEnabled?: boolean;
+    synonymModeEnabled?: boolean;
 }
 
 class OptionManager {
     sentenceSuggestEnabled?: boolean;
-    constructor({sentenceSuggestEnabled}: OptionManagerProps) {
+    synonymModeEnabled?: boolean;
+    constructor({sentenceSuggestEnabled, synonymModeEnabled}: OptionManagerProps) {
         this.sentenceSuggestEnabled = sentenceSuggestEnabled;
+        this.synonymModeEnabled = synonymModeEnabled;
     }
 
     setSentenceSuggestEnabled(enabled: boolean) {
@@ -14,6 +17,14 @@ class OptionManager {
     
     isSentenceSuggestEnabled(): boolean {
         return !!this.sentenceSuggestEnabled;
+    }
+
+    setSynonymModeEnabled(enabled: boolean) {
+        this.synonymModeEnabled = enabled;
+    }
+    
+    isSynonymModeEnabled(): boolean {
+        return !!this.synonymModeEnabled;
     }
 }
 

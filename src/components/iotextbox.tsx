@@ -1,11 +1,12 @@
 import Box from '@mui/material/Box';
 import TextareaAutosize from '@mui/material/TextareaAutosize';
-import { use, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TailoringPopper } from './tailoringpopper';
 import getCaretCoordinates from 'textarea-caret';
 import { IOTextBoxUtils } from '../utils/iotextbox_utils';
 import { MATCH_WORD_REGEX, MATCH_SENTENCE_REGEX } from '../utils/constants';
 import OptionManager from '../services/option_manager';
+import { simplifyService } from '../services/simplify_service';
 
 export type VirtualAnchor = {
     getBoundingClientRect: () => DOMRect;
@@ -42,6 +43,7 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, model
     const [words, setWords] = useState<string[]>([]);
     const [selectedWordIndex, setSelectedWordIndex] = useState<number | null>(null);
     const [highlightedWord, setHighlightedWord] = useState("");
+    const [suggestedSynonyms, setSuggestedSynonyms] = useState<string[]>([]);
 
     const [cursor, setCursor] = useState({
         start: 0,
@@ -102,6 +104,22 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, model
         }
     }, [sentenceAPICallback, selectedSentenceIndex, sentences, model, optionManager]);
 
+    // if synonym mode enabled, call synonym API
+    useEffect(() => {
+        if (optionManager?.isSynonymModeEnabled() && selectedWordIndex !== null && model !== undefined) {
+            const word = words[selectedWordIndex];
+            if (word) {
+                simplifyService.callSimplifySynonyms(word, model).then(res => {
+                    setSuggestedSynonyms(JSON.parse(res.replace(/'/g, '"')));
+                }
+                ).catch(err => {
+                    console.error("Error fetching synonyms:", err);
+                }
+                );
+            }
+        }
+    }, [selectedWordIndex, words, model, optionManager]);
+
     // on text change, update words and sentences, and notify parent
     useEffect(() => {
         setWords(text.match(MATCH_WORD_REGEX) || []);
@@ -160,6 +178,17 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, model
         setSelectedSentenceIndex(text.slice(0, cursor.start).split(/[.!?]/g).length - 1);
         IOTextBoxUtils.highlightWord(newText, selectedWordIndex);
         IOTextBoxUtils.highlightSentence(newText, selectedSentenceIndex);
+    }
+
+    function replaceSelectedWord(newWord: string) {
+        if (selectedWordIndex === null) return;
+        
+        words[selectedWordIndex] = newWord;
+        const newText = words.join(" ");
+        setText(newText);
+
+        setSelectedWordIndex(text.slice(0, cursor.start).split(/\s+/).length - 1);
+        IOTextBoxUtils.highlightWord(newText, selectedWordIndex);
     }
 
     const sharedStyles = {
@@ -241,6 +270,7 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, model
             </style>
         </Box>
         <TailoringPopper values={suggestedSentences} hidden={suggestedSentences.length === 0} anchorEl={anchorEl} onValueClick={(value: string) => {replaceSelectedSentence(value);}}/>
+        <TailoringPopper values={suggestedSynonyms} hidden={suggestedSynonyms.length === 0} anchorEl={anchorEl} onValueClick={(value: string) => {replaceSelectedWord(value);}}/>
     </>
     );
 }
