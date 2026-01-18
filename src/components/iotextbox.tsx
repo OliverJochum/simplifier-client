@@ -1,7 +1,7 @@
 import Box from '@mui/material/Box';
 import TextareaAutosize from '@mui/material/TextareaAutosize';
 import { use, useEffect, useRef, useState } from 'react';
-import { SentencePopper } from './sentencepopper';
+import { TailoringPopper } from './tailoringpopper';
 import getCaretCoordinates from 'textarea-caret';
 import { IOTextBoxUtils } from '../utils/iotextbox_utils';
 import { MATCH_WORD_REGEX, MATCH_SENTENCE_REGEX } from '../utils/constants';
@@ -240,7 +240,7 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, model
                 }`}
             </style>
         </Box>
-        <SentencePopper sentences={suggestedSentences} hidden={suggestedSentences.length === 0} anchorEl={anchorEl} onSentenceClick={(sentence) => {replaceSelectedSentence(sentence);}}/>
+        <TailoringPopper values={suggestedSentences} hidden={suggestedSentences.length === 0} anchorEl={anchorEl} onValueClick={(value: string) => {replaceSelectedSentence(value);}}/>
     </>
     );
 }
