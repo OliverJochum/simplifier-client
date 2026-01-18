@@ -3,6 +3,8 @@ import TextareaAutosize from '@mui/material/TextareaAutosize';
 import { useEffect, useRef, useState } from 'react';
 import { SentencePopper } from './sentencepopper';
 import getCaretCoordinates from 'textarea-caret';
+import { IOTextBoxUtils } from '../utils/iotextbox_utils';
+import { MATCH_WORD_REGEX, MATCH_SENTENCE_REGEX } from '../constants';
 
 export type VirtualAnchor = {
     getBoundingClientRect: () => DOMRect;
@@ -15,9 +17,6 @@ type IOTextBoxProps = {
     sentenceSuggestEnabled?: boolean;
     model?: string;
 }
-
-const MATCH_WORD_REGEX = /\b[\p{L}\p{N}']+\b/gu;
-const MATCH_SENTENCE_REGEX = /[^.!?]+[.!?]*/g;
 
 function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, sentenceSuggestEnabled, model }: IOTextBoxProps) {
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -67,48 +66,12 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, sente
     }, [cursor.start, cursor.end, cursor, text]);
 
     useEffect(() => {
-        // replace selected word in text with highlighted version
-        const selectedWord = text.replace(
-            MATCH_WORD_REGEX, // by using this regex, text can be split into words (arr of matches) NOTE: could make this constant
-            // then, per match
-            (match, _offset, full) => {
-                // get index of current word by checking how many words are before it in full text
-                // slice returns substring of full text from 0 to _offset (number of chars from beginning to current match)
-                // match returns array of words in substring
-                // index of current match in full text is length of that array (number of words before current match)
-                // ex. for "Hello world", current match "world" at offset 6
-                // ex. 0th match -> slice(0, 0) -> [] -> length 0
-                // ex. 1st match -> slice(0, 5) -> ["Hello"] -> length 1
-                const index = (full
-                .slice(0, _offset)
-                .match(MATCH_WORD_REGEX)?.length ?? 0); // edge case: if no words are before current match, current match must be index 0
-                
-                // highlight if index of current word matches selectedWordIndex
-                return index === selectedWordIndex
-                ? `<span class="highlight-word">${match}</span>`
-                : match;
-            }
-        );
-        // inner HTML of overlay is text with highlighted word wrapped in "highlight" span
-        setHighlightedWord(selectedWord);
+        setHighlightedWord(IOTextBoxUtils.highlightWord(text, selectedWordIndex));
     }, [selectedWordIndex, text, words]);
 
     // on selected sentence change - same logic as word highlighting, different regex
     useEffect(() => {
-        const selectedSentence = text.replace(
-            MATCH_SENTENCE_REGEX, 
-            (match, _offset, full) => {
-                const index = (full
-                .slice(0, _offset)
-                .match(MATCH_SENTENCE_REGEX)?.length ?? 0); 
-
-                return index === selectedSentenceIndex
-                ? `<span class="highlight-sentence">${match}</span>`
-                : match;
-            }
-        );
-        setHighlightedSentence(selectedSentence);
-
+        setHighlightedSentence(IOTextBoxUtils.highlightSentence(text, selectedSentenceIndex));
     }, [selectedSentenceIndex, sentences, text]);
 
     // if sentence suggestion enabled, call sentence suggestion API
