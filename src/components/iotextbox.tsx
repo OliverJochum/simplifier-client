@@ -105,21 +105,25 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, model
     }, [sentenceAPICallback, selectedSentenceIndex, sentences, model, optionManager]);
 
     // if synonym mode enabled, call synonym API
-    useEffect(() => {
-        if (optionManager?.isSynonymModeEnabled() && selectedWordIndex !== null && model !== undefined) {
-            const word = words[selectedWordIndex];
-            if (word) {
-                simplifyService.callSimplifySynonyms(word, model).then(res => {
-                    setSuggestedSynonyms(JSON.parse(res.replace(/'/g, '"')));
-                }
-                ).catch(err => {
+    useEffect( () => {
+        async function fetchSynonyms() {
+            if (optionManager?.isSynonymModeEnabled() && selectedWordIndex !== null && selectedSentenceIndex !== null && model !== undefined) {
+                const word = words[selectedWordIndex];
+                const sentence = sentences[selectedSentenceIndex]
+
+                if (word && sentence) {
+                    try {
+                        const data: { response: [string, number][] } = await simplifyService.callSimplifySynonyms(word, sentence);
+                        const parsed = data.response.map(([word, _score]) => word);
+                        setSuggestedSynonyms(parsed);
+                    } catch (err) {
                     console.error("Error fetching synonyms:", err);
+                    }   
                 }
-                );
             }
         }
-    }, [selectedWordIndex, words, model, optionManager]);
-
+        fetchSynonyms();
+    }, [selectedWordIndex, selectedSentenceIndex, words, sentences, model, optionManager]);
     // on text change, update words and sentences, and notify parent
     useEffect(() => {
         setWords(text.match(MATCH_WORD_REGEX) || []);

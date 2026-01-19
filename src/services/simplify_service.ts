@@ -16,8 +16,8 @@ export const simplifyService = {
         const response = await api.post("/simplify/sentence_suggest", { input_text: input, selected_service: selected_service });
         return response.data;
     },
-    callSimplifySynonyms: async (input: string, selected_service: string) => {
-        const response = await api.post("/simplify/synonyms", {input_text: input, selected_service: selected_service });
+    callSimplifySynonyms: async (input_word: string, sentence: string) => {
+        const response = await api.post("/simplify/synonyms", {input_word: input_word, sentence: sentence });
         return response.data;
     }
 }
