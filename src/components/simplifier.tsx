@@ -1,15 +1,20 @@
-import { useRef, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { simplifyService } from "../services/simplify_service";
 import IOTextBox from "./iotextbox";
 import Grid from "@mui/material/Grid";
 import OptionManager from "../services/option_manager";
+import Scorecard from "./scorecard";
+import { analyzeService } from "../services/analyze_service";
 
 type SimplifierProps = {
     optionManager?: OptionManager;
 }
 
 function Simplifier({ optionManager }: SimplifierProps) {
-    const [inputText, setInputText] = useState("");   
+    const [inputText, setInputText] = useState("");
+    const [outputText, setOutputText] = useState("");
+    const [inputScores, setInputScores] = useState<{ [key: string]: number | void }>({});
+    const [outputScores, setOutputScores] = useState<{ [key: string]: number | void }>({});
     const outputSetterRef = useRef<(val: string) => void>(() => {});
     
     const updateOutputSetterRef = (val: string) => {
@@ -21,6 +26,46 @@ function Simplifier({ optionManager }: SimplifierProps) {
             console.error("Error simplifying text:", err);
         });
     };
+
+    const handleScore = async (scoreType: string, text: string): Promise<number> => {
+        try {
+            const res = await analyzeService.callGetScore(scoreType, text);
+            console.log(`Fetched score (${scoreType}):`, res);
+            return res;
+        } catch (err) {
+            console.error(`Error fetching score (${scoreType}):`, err);
+            return 0; // fallback if API fails
+        }
+    };
+
+    useEffect(() => {
+        const fetchScores = async () => {
+            if (!optionManager) return;
+            const scores = optionManager.getSelectedLegibilityScores();
+            const results = await Promise.all(scores.map(score => handleScore(score, inputText)));
+            const newScores: Record<string, number> = {};
+            scores.forEach((score, i) => {
+                newScores[score] = results[i];
+            });
+            setInputScores(newScores);
+        };
+        fetchScores();
+    }, [inputText, optionManager]);
+
+    useEffect(() => {
+        const fetchScores = async () => {
+            if (!optionManager) return;
+            const scores = optionManager.getSelectedLegibilityScores();
+            const results = await Promise.all(scores.map(score => handleScore(score, outputText)));
+            const newScores: Record<string, number> = {};
+            scores.forEach((score, i) => {
+                newScores[score] = results[i];
+            });
+            setOutputScores(newScores);
+        };
+        fetchScores();
+    }, [optionManager, outputText]);
+
 
     // const onSentenceSelect = (sentence: string | null, sentenceIndex: number | null) => {
     //     if (!sentence) return;
@@ -36,10 +81,19 @@ function Simplifier({ optionManager }: SimplifierProps) {
             <div>
                 <Grid container spacing={1} sx={{ marginBottom: 1 }}>
                     <Grid size={6}>
+                        <Scorecard label="Legibility" scores={Object.entries(inputScores).map(([name, value]) => ({name, value: value || 0})) || []} />
                         <IOTextBox onTextChange={setInputText} sentenceAPICallback={simplifyService.callSimplifySentenceSimplify} model="openai" optionManager={optionManager} />
                     </Grid>
                     <Grid size={6}>
-                        <IOTextBox setTextFromParent={(setter: (val: string) => void) => {outputSetterRef.current = setter; }} sentenceAPICallback={simplifyService.callSimplifySentenceSuggest} model="openai" optionManager={optionManager} />
+                        <Grid container spacing={1} sx={{ marginBottom: 1 }}>
+                            <Grid size ={3}>
+                                <Scorecard label="Context retention" scores={[]} />
+                            </Grid>
+                            <Grid size ={3}>
+                                <Scorecard label="Legibility" scores={Object.entries(outputScores).map(([name, value]) => ({name, value: value || 0})) || []} />
+                            </Grid>
+                        </Grid>
+                        <IOTextBox onTextChange={setOutputText} setTextFromParent={(setter: (val: string) => void) => {outputSetterRef.current = setter; }} sentenceAPICallback={simplifyService.callSimplifySentenceSuggest} model="openai" optionManager={optionManager} />
                     </Grid>
                 </Grid>
             </div>

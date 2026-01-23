@@ -1,14 +1,17 @@
 type OptionManagerProps = {
     sentenceSuggestEnabled?: boolean;
     synonymModeEnabled?: boolean;
+    selectedLegibilityScores?: string[];
 }
 
 class OptionManager {
     sentenceSuggestEnabled?: boolean;
     synonymModeEnabled?: boolean;
-    constructor({sentenceSuggestEnabled, synonymModeEnabled}: OptionManagerProps) {
+    selectedLegibilityScores?: string[];
+    constructor({sentenceSuggestEnabled, synonymModeEnabled, selectedLegibilityScores}: OptionManagerProps) {
         this.sentenceSuggestEnabled = sentenceSuggestEnabled;
         this.synonymModeEnabled = synonymModeEnabled;
+        this.selectedLegibilityScores = selectedLegibilityScores || [];
     }
 
     setSentenceSuggestEnabled(enabled: boolean) {
@@ -25,6 +28,13 @@ class OptionManager {
     
     isSynonymModeEnabled(): boolean {
         return !!this.synonymModeEnabled;
+    }
+    setSelectedLegibilityScores(scores: string[]) {
+        this.selectedLegibilityScores = scores;
+    }
+    
+    getSelectedLegibilityScores(): string[] {
+        return this.selectedLegibilityScores || [];
     }
 }
 

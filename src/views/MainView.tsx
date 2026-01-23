@@ -7,22 +7,10 @@ import OptionManager from '../services/option_manager';
 
 
 function MainView() {
-    const optionManager = new OptionManager({ sentenceSuggestEnabled: false, synonymModeEnabled: false });
+    const optionManager = new OptionManager({ sentenceSuggestEnabled: false, synonymModeEnabled: false , selectedLegibilityScores: ['fre', 'wstf']});
 
     return (
         <Box sx={{ flexGrow: 1, padding: 2 }}>
-            <Grid container spacing={1} sx={{ marginBottom: 2 }}>
-                <Grid size ={3}>
-                    <Scorecard label="Legibility" scores={[{name: "FRE", value: 1}, {name: "WSTF", value: 1}]} />
-                </Grid>
-                <Grid size ={3} />
-                <Grid size ={3}>
-                    <Scorecard label="Context retention" scores={[]} />
-                </Grid>
-                <Grid size ={3}>
-                    <Scorecard label="Legibility" scores={[]} />
-                </Grid>
-            </Grid>
             <Grid container spacing={1}>
                 <Grid size={9}>
                     <Simplifier optionManager={optionManager} />

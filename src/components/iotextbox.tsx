@@ -124,6 +124,7 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, model
         }
         fetchSynonyms();
     }, [selectedWordIndex, selectedSentenceIndex, words, sentences, model, optionManager]);
+    
     // on text change, update words and sentences, and notify parent
     useEffect(() => {
         setWords(text.match(MATCH_WORD_REGEX) || []);
