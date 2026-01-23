@@ -36,8 +36,8 @@ function OptionVBar ({ optionManager }: OptionVBarProps) {
             <FormGroup>
                 <FormLabel component="legend">Tailoring</FormLabel>
                 <FormControlLabel control={<Switch />} label="Auto-Glossary" labelPlacement="start" />
-                <FormControlLabel control={<Switch checked={synonymModeEnabled} onChange={(e) => setSynonymModeEnabled(e.target.checked)} />} label="Synonym Mode" labelPlacement="start" />
-                <FormControlLabel control={<Switch checked={sentenceSuggestEnabled} onChange={(e) => setSentenceSuggestEnabled(e.target.checked)} />} label="Sentence suggest" labelPlacement="start" />
+                <FormControlLabel control={<Switch checked={synonymModeEnabled} onChange={(e) => {setSynonymModeEnabled(e.target.checked); setSentenceSuggestEnabled(!e.target.checked)}} />} label="Synonym Mode" labelPlacement="start" />
+                <FormControlLabel control={<Switch checked={sentenceSuggestEnabled} onChange={(e) => {setSentenceSuggestEnabled(e.target.checked); setSynonymModeEnabled(!e.target.checked)}} />} label="Sentence suggest" labelPlacement="start" />
             </FormGroup>
             <FormGroup>
                 <FormLabel component="legend">Version Control</FormLabel>

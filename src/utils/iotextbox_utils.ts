@@ -43,6 +43,10 @@ export const IOTextBoxUtils = {
                 : match;
                 }
             );
+        },
+        // helper function to join sentences with proper spacing after punctuation
+        joinSentences: (sentences: string[]): string => {
+            return sentences.join("").replace(/([.!?])([^\s.!?])/g, "$1 $2");
         }
 
 }

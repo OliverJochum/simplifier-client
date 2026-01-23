@@ -175,24 +175,36 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, model
         if (selectedSentenceIndex === null) return;
 
         sentences[selectedSentenceIndex] = newSentence;
-        const newText = sentences.join(" ");
+        const newText = IOTextBoxUtils.joinSentences(sentences);
         setText(newText);
 
         setSelectedWordIndex(text.slice(0, cursor.start).split(/\s+/).length - 1);
         setSelectedSentenceIndex(text.slice(0, cursor.start).split(/[.!?]/g).length - 1);
         IOTextBoxUtils.highlightWord(newText, selectedWordIndex);
         IOTextBoxUtils.highlightSentence(newText, selectedSentenceIndex);
+
+        setSuggestedSentences([]);
+        setSelectedSentenceIndex(null);
     }
 
     function replaceSelectedWord(newWord: string) {
-        if (selectedWordIndex === null) return;
+        if (selectedWordIndex === null || selectedSentenceIndex === null) return;
         
-        words[selectedWordIndex] = newWord;
-        const newText = words.join(" ");
+        const newSentence = sentences[selectedSentenceIndex].replace(words[selectedWordIndex], newWord);
+        const newSentences = [...sentences];
+        newSentences[selectedSentenceIndex] = newSentence;
+        const newText = IOTextBoxUtils.joinSentences(newSentences);
         setText(newText);
+
+        // words[selectedWordIndex] = newWord;
+        // const newText = words.join(" "); // probably causing issues with spacing/punctuation, could replace word in sentence instead and build new text from sentences
+        // setText(newText);
 
         setSelectedWordIndex(text.slice(0, cursor.start).split(/\s+/).length - 1);
         IOTextBoxUtils.highlightWord(newText, selectedWordIndex);
+        setSuggestedSynonyms([]);
+        setSelectedWordIndex(null); 
+
     }
 
     const sharedStyles = {
