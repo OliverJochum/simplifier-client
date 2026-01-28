@@ -15,6 +15,7 @@ function Simplifier({ optionManager }: SimplifierProps) {
     const [outputText, setOutputText] = useState("");
     const [inputScores, setInputScores] = useState<{ [key: string]: number | void }>({});
     const [outputScores, setOutputScores] = useState<{ [key: string]: number | void }>({});
+    const [ctxtRetentionScores, setCtxtRetentionScores] = useState<{ [key: string]: number | void }>({});
     const outputSetterRef = useRef<(val: string) => void>(() => {});
     
     const updateOutputSetterRef = (val: string) => {
@@ -27,9 +28,9 @@ function Simplifier({ optionManager }: SimplifierProps) {
         });
     };
 
-    const handleScore = async (scoreType: string, text: string): Promise<number> => {
+    const handleReadabilityScore = async (scoreType: string, text: string): Promise<number> => {
         try {
-            const res = await analyzeService.callGetScore(scoreType, text);
+            const res = await analyzeService.callGetReadabilityScore(scoreType, text);
             console.log(`Fetched score (${scoreType}):`, res);
             return res;
         } catch (err) {
@@ -38,33 +39,58 @@ function Simplifier({ optionManager }: SimplifierProps) {
         }
     };
 
+    const handleCtxtRetentionScore = async (scoreType: string, candidateText: string, referenceText: string): Promise<number> => {
+        try {
+            const res = await analyzeService.callGetCtxtRetentionScore(scoreType, candidateText, referenceText);
+            console.log(`Fetched context retention score (${scoreType}):`, res);
+            return res;
+        } catch (err) {
+            console.error(`Error fetching context retention score (${scoreType}):`, err);
+            return 0;
+        }
+    }
+
     useEffect(() => {
-        const fetchScores = async () => {
+        const fetchInputLegibilityScores = async () => {
             if (!optionManager) return;
             const scores = optionManager.getSelectedLegibilityScores();
-            const results = await Promise.all(scores.map(score => handleScore(score, inputText)));
+            const results = await Promise.all(scores.map(score => handleReadabilityScore(score, inputText)));
             const newScores: Record<string, number> = {};
             scores.forEach((score, i) => {
                 newScores[score] = results[i];
             });
             setInputScores(newScores);
         };
-        fetchScores();
+        fetchInputLegibilityScores();
     }, [inputText, optionManager]);
 
     useEffect(() => {
-        const fetchScores = async () => {
+        const fetchOutputLegibilityScores = async () => {
             if (!optionManager) return;
             const scores = optionManager.getSelectedLegibilityScores();
-            const results = await Promise.all(scores.map(score => handleScore(score, outputText)));
+            const results = await Promise.all(scores.map(score => handleReadabilityScore(score, outputText)));
             const newScores: Record<string, number> = {};
             scores.forEach((score, i) => {
                 newScores[score] = results[i];
             });
             setOutputScores(newScores);
         };
-        fetchScores();
+        fetchOutputLegibilityScores();
     }, [optionManager, outputText]);
+
+    useEffect(() => {
+        const fetchCtxtRetentionScores = async () => {
+            if (!optionManager) return;
+            const scores = optionManager.getSelectedCtxtRetentionScores();
+            const results = await Promise.all(scores.map(score => handleCtxtRetentionScore(score, outputText, inputText)));
+            const newScores: Record<string, number> = {};
+            scores.forEach((score, i) => {
+                newScores[score] = results[i];
+            });
+            setCtxtRetentionScores(newScores);
+        }
+        fetchCtxtRetentionScores();
+    }, [optionManager, inputText, outputText]);
 
 
     // const onSentenceSelect = (sentence: string | null, sentenceIndex: number | null) => {
@@ -87,7 +113,7 @@ function Simplifier({ optionManager }: SimplifierProps) {
                     <Grid size={6}>
                         <Grid container spacing={1} sx={{ marginBottom: 1 }}>
                             <Grid size ={3}>
-                                <Scorecard label="Context retention" scores={[]} />
+                                <Scorecard label="Context retention" scores={Object.entries(ctxtRetentionScores).map(([name, value]) => ({name, value: value || 0})) || []} />
                             </Grid>
                             <Grid size ={3}>
                                 <Scorecard label="Legibility" scores={Object.entries(outputScores).map(([name, value]) => ({name, value: value || 0})) || []} />
