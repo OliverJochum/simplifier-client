@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { TailoringPopper } from './tailoringpopper';
 import getCaretCoordinates from 'textarea-caret';
 import { IOTextBoxUtils } from '../utils/iotextbox_utils';
-import { MATCH_WORD_REGEX, MATCH_SENTENCE_REGEX } from '../utils/constants';
+import { ABBREVIATION_MAP } from '../utils/constants';
 import OptionManager from '../services/option_manager';
 import { simplifyService } from '../services/simplify_service';
 
@@ -73,21 +73,27 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, model
         // select word by getting index from cursor position
         // Slice text between beginning and where text cursor is, split text into array by spaces, get length of array - 1
         // Since word is last element in sliced array, pos in total text is length - 1
-        setSelectedWordIndex(text.slice(0, cursor.start).split(/\s+/).length - 1);
+        let temp_text = text;
+        for (let ele of Array.from(ABBREVIATION_MAP.entries())) {
+                temp_text = temp_text.replaceAll(ele[0], ele[1]);
+        }
+        setSelectedWordIndex(temp_text.slice(0, cursor.start).split(/\s+/).length - 1);
 
         // select sentence
         // same logic, except split by sentence ending punctuation
-        setSelectedSentenceIndex(text.slice(0, cursor.start).split(/[.!?]/g).length - 1);
+        setSelectedSentenceIndex(temp_text.slice(0, cursor.start).split(/[.!?]/g).length - 1);
 
     }, [cursor.start, cursor.end, cursor, text]);
 
     useEffect(() => {
         setHighlightedWord(IOTextBoxUtils.highlightWord(text, selectedWordIndex));
+        console.log("Highlighted word updated:", IOTextBoxUtils.highlightWord(text, selectedWordIndex));
     }, [selectedWordIndex, text, words]);
 
     // on selected sentence change - same logic as word highlighting, different regex
     useEffect(() => {
         setHighlightedSentence(IOTextBoxUtils.highlightSentence(text, selectedSentenceIndex));
+        console.log("Highlighted sentence updated:", IOTextBoxUtils.highlightSentence(text, selectedSentenceIndex));
     }, [selectedSentenceIndex, sentences, text]);
 
     // if sentence suggestion enabled, call sentence suggestion API
@@ -127,8 +133,9 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, model
     
     // on text change, update words and sentences, and notify parent
     useEffect(() => {
-        setWords(text.match(MATCH_WORD_REGEX) || []);
-        setSentences(text.match(MATCH_SENTENCE_REGEX) || []);
+        const {words, sentences} = IOTextBoxUtils.getWordsSentencesFromText(text);
+        setWords(words);
+        setSentences(sentences);
         if (onTextChange) {
             onTextChange(text);
         }
@@ -228,14 +235,14 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, model
                 sx={{
                     ...sharedStyles,
                     // debugging
-                    // color: "rgba(0,0,0,0.2)",
-                    // background: "rgba(255,0,0,0.05)",
+                    color: "rgba(0,0,0,0.2)",
+                    background: "rgba(255,0,0,0.05)",
                     overflowWrap: "break-word",
                     boxSizing: "border-box",
                     position: "absolute",
                     top: 0,
                     left: 0,
-                    color: "transparent",
+                    // color: "transparent",
                     pointerEvents: "none",
                 }}
                 dangerouslySetInnerHTML={{ __html: highlightedSentence }}
@@ -268,6 +275,8 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, model
                 overflowWrap: "break-word",
                 background: "transparent",
                 position: "relative",
+                // debugging
+                // color: "transparent",
                 zIndex: 1,
             }}
             value={text}

@@ -1,0 +1,61 @@
+abbr,placeholder
+z.B.,__ABBR_ZB__
+z. B.,__ABBR_Z_B__
+d.h.,__ABBR_DH__
+d. h.,__ABBR_D_H__
+u.a.,__ABBR_UA__
+u. a.,__ABBR_U_A__
+bzw.,__ABBR_BZW__
+etc.,__ABBR_ETC__
+vgl.,__ABBR_VGL__
+evtl.,__ABBR_EVTL__
+ca.,__ABBR_CA__
+inkl.,__ABBR_INKL__
+exkl.,__ABBR_EXKL__
+ggf.,__ABBR_GGF__
+bzgl.,__ABBR_BZGL__
+Hr.,__ABBR_HR__
+Fr.,__ABBR_FR__
+Dr.,__ABBR_DR__
+Prof.,__ABBR_PROF__
+Dipl.,__ABBR_DIPL__
+Mag.,__ABBR_MAG__
+Univ.,__ABBR_UNIV__
+Jun.,__ABBR_JUN__
+Sen.,__ABBR_SEN__
+Hrsg.,__ABBR_HRSG__
+Bd.,__ABBR_BD__
+Bde.,__ABBR_BDE__
+Aufl.,__ABBR_AUFL__
+Abb.,__ABBR_ABB__
+Kap.,__ABBR_KAP__
+Nr.,__ABBR_NR__
+S.,__ABBR_S__
+ff.,__ABBR_FF__
+z.T.,__ABBR_ZT__
+z. T.,__ABBR_Z_T__
+i.d.R.,__ABBR_IDR__
+i. d. R.,__ABBR_I_D_R__
+i.Allg.,__ABBR_IALLG__
+i. Allg.,__ABBR_I_ALLG__
+i.S.v.,__ABBR_ISV__
+i. S. v.,__ABBR_I_S_V__
+i.H.v.,__ABBR_IHV__
+i. H. v.,__ABBR_I_H_V__
+i.V.m.,__ABBR_IVM__
+i. V. m.,__ABBR_I_V_M__
+Std.,__ABBR_STD__
+Min.,__ABBR_MIN__
+Sek.,__ABBR_SEK__
+Jh.,__ABBR_JH__
+Jg.,__ABBR_JG__
+Art.,__ABBR_ART__
+Abs.,__ABBR_ABS__
+Nrn.,__ABBR_NRN__
+lit.,__ABBR_LIT__
+gem.,__ABBR_GEM__
+i.e.,__ABBR_IE__
+i. e.,__ABBR_I_E__
+e.g.,__ABBR_EG__
+e. g.,__ABBR_E_G__
+et al.,__ABBR_ETAL__

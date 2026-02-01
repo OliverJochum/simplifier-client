@@ -1,4 +1,4 @@
-import { MATCH_SENTENCE_REGEX, MATCH_WORD_REGEX } from "./constants";
+import { MATCH_SENTENCE_REGEX, MATCH_WORD_REGEX, ABBREVIATION_MAP } from "./constants";
 
 export const IOTextBoxUtils = {
         
@@ -6,7 +6,7 @@ export const IOTextBoxUtils = {
         highlightWord: (text: string, selectedWordIndex: number | null) => { 
             if (selectedWordIndex === null) return text;
             return text.replace(
-            MATCH_WORD_REGEX, // by using this regex, text can be split into words (arr of matches) NOTE: could make this constant
+            MATCH_WORD_REGEX, // by using this regex, text can be split into words (arr of matches) 
             // then, per match
             (match, _offset, full) => {
                 // get index of current word by checking how many words are before it in full text
@@ -31,6 +31,9 @@ export const IOTextBoxUtils = {
 
         highlightSentence: (text: string, selectedSentenceIndex: number | null) => {
             if (selectedSentenceIndex === null) return text;
+            for (let ele of Array.from(ABBREVIATION_MAP.entries())) {
+                text = text.replaceAll(ele[0], ele[1]);
+            }
             return text.replace(
             MATCH_SENTENCE_REGEX, 
             (match, _offset, full) => {
@@ -38,6 +41,10 @@ export const IOTextBoxUtils = {
                 .slice(0, _offset)
                 .match(MATCH_SENTENCE_REGEX)?.length ?? 0); 
 
+                for (let ele of Array.from(ABBREVIATION_MAP.entries())) {
+                    match = match.replaceAll(ele[1], ele[0]);
+                }
+                console.log("match", match);
                 return index === selectedSentenceIndex
                 ? `<span class="highlight-sentence">${match}</span>`
                 : match;
@@ -47,6 +54,26 @@ export const IOTextBoxUtils = {
         // helper function to join sentences with proper spacing after punctuation
         joinSentences: (sentences: string[]): string => {
             return sentences.join("").replace(/([.!?])([^\s.!?])/g, "$1 $2");
+        },
+
+        // logic similar to that of server, replace troublesome abbreaviations with placeholders before splitting into sentences, then retransform sentences after split
+        getWordsSentencesFromText: (text: string): {words: string[], sentences: string[]} => {
+            for (let ele of Array.from(ABBREVIATION_MAP.entries())) {
+                text = text.replaceAll(ele[0], ele[1]);
+            }
+            const words = text.match(MATCH_WORD_REGEX) || [];
+            const sentences = text.match(MATCH_SENTENCE_REGEX) || [];
+            for (let word of words) {
+                for (let ele of Array.from(ABBREVIATION_MAP.entries())) {
+                    word = word.replaceAll(ele[1], ele[0]);
+                }
+            }
+            for (let sentence of sentences) {
+                for (let ele of Array.from(ABBREVIATION_MAP.entries())) {
+                    sentence = sentence.replaceAll(ele[1], ele[0]);
+                }
+            }
+            return {words, sentences};
         }
 
 }
