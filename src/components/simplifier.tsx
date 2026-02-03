@@ -5,6 +5,7 @@ import Grid from "@mui/material/Grid";
 import OptionManager from "../services/option_manager";
 import Scorecard from "./scorecard";
 import { analyzeService } from "../services/analyze_service";
+import { useSelectedCtxtRetentionScores, useSelectedLegibilityScores } from "../services/option_manager_hooks";
 
 type SimplifierProps = {
     optionManager?: OptionManager;
@@ -13,11 +14,14 @@ type SimplifierProps = {
 function Simplifier({ optionManager }: SimplifierProps) {
     const [inputText, setInputText] = useState("");
     const [outputText, setOutputText] = useState("");
-    const [inputScores, setInputScores] = useState<{ [key: string]: number | void }>({});
-    const [outputScores, setOutputScores] = useState<{ [key: string]: number | void }>({});
-    const [ctxtRetentionScores, setCtxtRetentionScores] = useState<{ [key: string]: number | void }>({});
+    const [inputScores, setInputScores] = useState<{ [key: string]: number | 0 }>({});
+    const [outputScores, setOutputScores] = useState<{ [key: string]: number | 0 }>({});
+    const [ctxtRetentionScores, setCtxtRetentionScores] = useState<{ [key: string]: number | 0 }>({});
     const outputSetterRef = useRef<(val: string) => void>(() => {});
     
+    const selectedLegibilityScores = useSelectedLegibilityScores(optionManager!);
+    const selectedCtxtRetentionScores = useSelectedCtxtRetentionScores(optionManager!);
+
     const updateOutputSetterRef = (val: string) => {
         outputSetterRef.current?.(val);
     }
@@ -29,6 +33,7 @@ function Simplifier({ optionManager }: SimplifierProps) {
     };
 
     const handleReadabilityScore = async (scoreType: string, text: string): Promise<number> => {
+        if (!text || text.trim() === "") return 0;
         try {
             const res = await analyzeService.callGetReadabilityScore(scoreType, text);
             console.log(`Fetched score (${scoreType}):`, res);
@@ -40,6 +45,7 @@ function Simplifier({ optionManager }: SimplifierProps) {
     };
 
     const handleCtxtRetentionScore = async (scoreType: string, candidateText: string, referenceText: string): Promise<number> => {
+        if (!candidateText || candidateText.trim() === "" || !referenceText || referenceText.trim() === "") return 0;
         try {
             const res = await analyzeService.callGetCtxtRetentionScore(scoreType, candidateText, referenceText);
             console.log(`Fetched context retention score (${scoreType}):`, res);
@@ -52,8 +58,7 @@ function Simplifier({ optionManager }: SimplifierProps) {
 
     useEffect(() => {
         const fetchInputLegibilityScores = async () => {
-            if (!optionManager) return;
-            const scores = optionManager.getSelectedLegibilityScores();
+            const scores = selectedLegibilityScores;
             const results = await Promise.all(scores.map(score => handleReadabilityScore(score, inputText)));
             const newScores: Record<string, number> = {};
             scores.forEach((score, i) => {
@@ -62,12 +67,11 @@ function Simplifier({ optionManager }: SimplifierProps) {
             setInputScores(newScores);
         };
         fetchInputLegibilityScores();
-    }, [inputText, optionManager]);
+    }, [inputText, selectedLegibilityScores]);
 
     useEffect(() => {
         const fetchOutputLegibilityScores = async () => {
-            if (!optionManager) return;
-            const scores = optionManager.getSelectedLegibilityScores();
+            const scores = selectedLegibilityScores;
             const results = await Promise.all(scores.map(score => handleReadabilityScore(score, outputText)));
             const newScores: Record<string, number> = {};
             scores.forEach((score, i) => {
@@ -76,12 +80,11 @@ function Simplifier({ optionManager }: SimplifierProps) {
             setOutputScores(newScores);
         };
         fetchOutputLegibilityScores();
-    }, [optionManager, outputText]);
+    }, [outputText, selectedLegibilityScores]);
 
     useEffect(() => {
         const fetchCtxtRetentionScores = async () => {
-            if (!optionManager) return;
-            const scores = optionManager.getSelectedCtxtRetentionScores();
+            const scores = selectedCtxtRetentionScores;
             const results = await Promise.all(scores.map(score => handleCtxtRetentionScore(score, outputText, inputText)));
             const newScores: Record<string, number> = {};
             scores.forEach((score, i) => {
@@ -90,8 +93,7 @@ function Simplifier({ optionManager }: SimplifierProps) {
             setCtxtRetentionScores(newScores);
         }
         fetchCtxtRetentionScores();
-    }, [optionManager, inputText, outputText]);
-
+    }, [inputText, outputText, selectedCtxtRetentionScores]);
 
     // const onSentenceSelect = (sentence: string | null, sentenceIndex: number | null) => {
     //     if (!sentence) return;

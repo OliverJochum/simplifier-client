@@ -1,12 +1,13 @@
 import Box from '@mui/material/Box';
 import TextareaAutosize from '@mui/material/TextareaAutosize';
-import { useEffect, useRef, useState } from 'react';
+import { use, useEffect, useRef, useState } from 'react';
 import { TailoringPopper } from './tailoringpopper';
 import getCaretCoordinates from 'textarea-caret';
 import { IOTextBoxUtils } from '../utils/iotextbox_utils';
 import { MATCH_WORD_REGEX, MATCH_SENTENCE_REGEX } from '../utils/constants';
 import OptionManager from '../services/option_manager';
 import { simplifyService } from '../services/simplify_service';
+import { useSentenceSuggestEnabled, useSynonymModeEnabled } from '../services/option_manager_hooks';
 
 export type VirtualAnchor = {
     getBoundingClientRect: () => DOMRect;
@@ -44,6 +45,9 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, model
     const [selectedWordIndex, setSelectedWordIndex] = useState<number | null>(null);
     const [highlightedWord, setHighlightedWord] = useState("");
     const [suggestedSynonyms, setSuggestedSynonyms] = useState<string[]>([]);
+
+    const isSynonymModeEnabled = useSynonymModeEnabled(optionManager!);
+    const isSentenceSuggestEnabled = useSentenceSuggestEnabled(optionManager!);
 
     const [cursor, setCursor] = useState({
         start: 0,
@@ -92,7 +96,7 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, model
 
     // if sentence suggestion enabled, call sentence suggestion API
     useEffect(() => {
-        if (optionManager?.isSentenceSuggestEnabled() && sentenceAPICallback && selectedSentenceIndex !== null && model !== undefined) {
+        if (isSentenceSuggestEnabled && sentenceAPICallback && selectedSentenceIndex !== null && model !== undefined) {
             const sentence = sentences[selectedSentenceIndex];
             if (sentence) {
                 sentenceAPICallback(sentence, model).then(res => {
@@ -102,12 +106,12 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, model
                 });
             }
         }
-    }, [sentenceAPICallback, selectedSentenceIndex, sentences, model, optionManager]);
+    }, [sentenceAPICallback, selectedSentenceIndex, sentences, model, isSentenceSuggestEnabled]);
 
     // if synonym mode enabled, call synonym API
     useEffect( () => {
         async function fetchSynonyms() {
-            if (optionManager?.isSynonymModeEnabled() && selectedWordIndex !== null && selectedSentenceIndex !== null && model !== undefined) {
+            if (isSynonymModeEnabled && selectedWordIndex !== null && selectedSentenceIndex !== null && model !== undefined) {
                 const word = words[selectedWordIndex];
                 const sentence = sentences[selectedSentenceIndex]
 
@@ -123,7 +127,7 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, model
             }
         }
         fetchSynonyms();
-    }, [selectedWordIndex, selectedSentenceIndex, words, sentences, model, optionManager]);
+    }, [selectedWordIndex, selectedSentenceIndex, words, sentences, model, isSynonymModeEnabled]);
     
     // on text change, update words and sentences, and notify parent
     useEffect(() => {

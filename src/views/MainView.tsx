@@ -2,12 +2,12 @@ import Simplifier from '../components/simplifier';
 import OptionVBar from '../components/optionvbar';
 import Grid from '@mui/material/Grid';
 import Box from '@mui/material/Box';
-import Scorecard from '../components/scorecard';
 import OptionManager from '../services/option_manager';
+import SessionBox from '../components/sessionbox';
 
 
 function MainView() {
-    const optionManager = new OptionManager({ sentenceSuggestEnabled: false, synonymModeEnabled: false , selectedLegibilityScores: ['fre', 'wstf'], selectedCtxtRetentionScores: ['bertscore']});
+    const optionManager = new OptionManager({ sentenceSuggestEnabled: false, synonymModeEnabled: false , showSessionBox: false, selectedLegibilityScores: ['fre', 'wstf'], selectedCtxtRetentionScores: ['bertscore']});
 
     return (
         <Box sx={{ flexGrow: 1, padding: 2 }}>
@@ -17,6 +17,7 @@ function MainView() {
                 </Grid>
                 <Grid size={3}>
                     <OptionVBar optionManager={optionManager} />
+                    <SessionBox optionManager={optionManager} onClose={() => optionManager.setShowSessionBox(false)}/>
                 </Grid>
             </Grid>
         </Box>
