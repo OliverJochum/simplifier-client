@@ -4,6 +4,8 @@ type OptionManagerProps = {
     selectedLegibilityScores?: string[];
     selectedCtxtRetentionScores?: string[];
     showSessionBox?: boolean;
+    selectedSessionId?: number;
+    ownerId?: number;
 };
 
 type Listener = () => void;
@@ -14,6 +16,8 @@ class OptionManager {
     private showSessionBox = false;
     private selectedLegibilityScores: string[] = [];
     private selectedCtxtRetentionScores: string[] = [];
+    private selectedSessionId: number | undefined;
+    private ownerId: number | undefined;
 
     private listeners = new Set<Listener>();
 
@@ -33,17 +37,17 @@ class OptionManager {
         synonymModeEnabled,
         selectedLegibilityScores,
         selectedCtxtRetentionScores,
-        showSessionBox
+        showSessionBox,
+        selectedSessionId,
+        ownerId
     }: OptionManagerProps) {
         if (sentenceSuggestEnabled !== undefined) this.sentenceSuggestEnabled = sentenceSuggestEnabled;
-
         if (synonymModeEnabled !== undefined) this.synonymModeEnabled = synonymModeEnabled;
-
         if (showSessionBox !== undefined) this.showSessionBox = showSessionBox;
-
         if (selectedLegibilityScores) this.selectedLegibilityScores = selectedLegibilityScores;
-
         if (selectedCtxtRetentionScores) this.selectedCtxtRetentionScores = selectedCtxtRetentionScores;
+        if (selectedSessionId !== undefined) this.selectedSessionId = selectedSessionId;
+        if (ownerId !== undefined) this.ownerId = ownerId;
     }
 
     setSentenceSuggestEnabled(enabled: boolean) {
@@ -99,6 +103,28 @@ class OptionManager {
 
     isShowSessionBox(): boolean {
         return this.showSessionBox;
+    }
+
+    setSelectedSessionId(sessionId: number | undefined) {
+        if (this.selectedSessionId !== sessionId) {
+            this.selectedSessionId = sessionId;
+            this.notify();
+        }
+    }
+
+    getSelectedSessionId(): number | undefined {
+        return this.selectedSessionId;
+    }
+
+    setOwnerId(ownerId: number | undefined) {
+        if (this.ownerId !== ownerId) {
+            this.ownerId = ownerId;
+            this.notify();
+        }
+    }
+
+    getOwnerId(): number | undefined {
+        return this.ownerId;
     }
 }
 

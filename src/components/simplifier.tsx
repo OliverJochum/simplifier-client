@@ -1,11 +1,12 @@
-import { use, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { simplifyService } from "../services/simplify_service";
 import IOTextBox from "./iotextbox";
 import Grid from "@mui/material/Grid";
 import OptionManager from "../services/option_manager";
 import Scorecard from "./scorecard";
 import { analyzeService } from "../services/analyze_service";
-import { useSelectedCtxtRetentionScores, useSelectedLegibilityScores } from "../services/option_manager_hooks";
+import { sessionService } from "../services/session_service";
+import { useOwnerId, useSelectedCtxtRetentionScores, useSelectedLegibilityScores, useSelectedSessionId } from "../services/option_manager_hooks";
 
 type SimplifierProps = {
     optionManager?: OptionManager;
@@ -17,10 +18,12 @@ function Simplifier({ optionManager }: SimplifierProps) {
     const [inputScores, setInputScores] = useState<{ [key: string]: number | 0 }>({});
     const [outputScores, setOutputScores] = useState<{ [key: string]: number | 0 }>({});
     const [ctxtRetentionScores, setCtxtRetentionScores] = useState<{ [key: string]: number | 0 }>({});
-    const outputSetterRef = useRef<(val: string) => void>(() => {});
-    
+    const outputSetterRef = useRef<(val: string) => void>(() => { });
+
     const selectedLegibilityScores = useSelectedLegibilityScores(optionManager!);
     const selectedCtxtRetentionScores = useSelectedCtxtRetentionScores(optionManager!);
+    const selectedSessionId = useSelectedSessionId(optionManager!);
+    const ownerId = useOwnerId(optionManager!);
 
     const updateOutputSetterRef = (val: string) => {
         outputSetterRef.current?.(val);
@@ -104,24 +107,53 @@ function Simplifier({ optionManager }: SimplifierProps) {
     //     });
     // };
 
+
+    // useEffect(() => {
+    //     console.log("Create session effect triggered");
+    //     if (!ownerId) return;
+    //     if (selectedSessionId) return;
+
+    //     console.log("Creating session from effect", ownerId);
+    //     sessionService.createSession(ownerId, "Untitled Session")
+    //         .then(res => {
+    //             optionManager?.setSelectedSessionId(res.id);
+    //         });
+    // }, [ownerId, selectedSessionId, optionManager]);
+
+    useEffect(() => {
+        if (!ownerId || !selectedSessionId || (!inputText && !outputText)) return;
+
+        console.log("Creating snapshot from effect", selectedSessionId, ownerId);
+        const timeout = setTimeout(() => {
+            sessionService.createSnapshot(
+            inputText,
+            outputText,
+            selectedSessionId,
+            ownerId
+            );
+        }, 5000);
+
+        return () => clearTimeout(timeout); // before effect runs again, clear timeout (in case of text change)
+    }, [inputText, outputText, selectedSessionId, ownerId]);
+
     return (
         <div>
             <div>
                 <Grid container spacing={1} sx={{ marginBottom: 1 }}>
                     <Grid size={6}>
-                        <Scorecard label="Legibility" scores={Object.entries(inputScores).map(([name, value]) => ({name, value: value || 0})) || []} />
+                        <Scorecard label="Legibility" scores={Object.entries(inputScores).map(([name, value]) => ({ name, value: value || 0 })) || []} />
                         <IOTextBox onTextChange={setInputText} sentenceAPICallback={simplifyService.callSimplifySentenceSimplify} model="openai" optionManager={optionManager} />
                     </Grid>
                     <Grid size={6}>
                         <Grid container spacing={1} sx={{ marginBottom: 1 }}>
-                            <Grid size ={3}>
-                                <Scorecard label="Context retention" scores={Object.entries(ctxtRetentionScores).map(([name, value]) => ({name, value: value || 0})) || []} />
+                            <Grid size={3}>
+                                <Scorecard label="Context retention" scores={Object.entries(ctxtRetentionScores).map(([name, value]) => ({ name, value: value || 0 })) || []} />
                             </Grid>
-                            <Grid size ={3}>
-                                <Scorecard label="Legibility" scores={Object.entries(outputScores).map(([name, value]) => ({name, value: value || 0})) || []} />
+                            <Grid size={3}>
+                                <Scorecard label="Legibility" scores={Object.entries(outputScores).map(([name, value]) => ({ name, value: value || 0 })) || []} />
                             </Grid>
                         </Grid>
-                        <IOTextBox onTextChange={setOutputText} setTextFromParent={(setter: (val: string) => void) => {outputSetterRef.current = setter; }} sentenceAPICallback={simplifyService.callSimplifySentenceSuggest} model="openai" optionManager={optionManager} />
+                        <IOTextBox onTextChange={setOutputText} setTextFromParent={(setter: (val: string) => void) => { outputSetterRef.current = setter; }} sentenceAPICallback={simplifyService.callSimplifySentenceSuggest} model="openai" optionManager={optionManager} />
                     </Grid>
                 </Grid>
             </div>

@@ -36,4 +36,18 @@ function useSelectedCtxtRetentionScores(optionManager: OptionManager) {
     );
 }
 
-export { useSentenceSuggestEnabled, useSynonymModeEnabled, useShowSessionBox, useSelectedLegibilityScores, useSelectedCtxtRetentionScores };
+function useSelectedSessionId(optionManager: OptionManager) {
+    return useSyncExternalStore(
+        optionManager.subscribe.bind(optionManager),
+        () => optionManager.getSelectedSessionId()
+    );
+}
+
+function useOwnerId(optionManager: OptionManager) {
+    return useSyncExternalStore(
+        optionManager.subscribe.bind(optionManager),
+        () => optionManager.getOwnerId()
+    );
+}
+
+export { useSentenceSuggestEnabled, useSynonymModeEnabled, useShowSessionBox, useSelectedLegibilityScores, useSelectedCtxtRetentionScores, useSelectedSessionId, useOwnerId };

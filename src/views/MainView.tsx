@@ -7,7 +7,16 @@ import SessionBox from '../components/sessionbox';
 
 
 function MainView() {
-    const optionManager = new OptionManager({ sentenceSuggestEnabled: false, synonymModeEnabled: false , showSessionBox: false, selectedLegibilityScores: ['fre', 'wstf'], selectedCtxtRetentionScores: ['bertscore']});
+    const optionManager = new OptionManager(
+        { 
+            sentenceSuggestEnabled: false,
+            synonymModeEnabled: false ,
+            showSessionBox: false,
+            selectedLegibilityScores: ['fre', 'wstf'],
+            selectedCtxtRetentionScores: ['bertscore'],
+            selectedSessionId: 1,
+            ownerId: 1,
+    });
 
     return (
         <Box sx={{ flexGrow: 1, padding: 2 }}>
