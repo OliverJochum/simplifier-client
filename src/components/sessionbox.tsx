@@ -1,29 +1,22 @@
-import { Box, IconButton, MenuItem, Paper, Select, SelectChangeEvent } from "@mui/material"
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { Box, FormControl, IconButton, InputLabel, List, ListItemButton, MenuItem, Paper, Select, SelectChangeEvent } from "@mui/material"
+import { useState } from "react";
 import CloseIcon from "@mui/icons-material/Close";
 import OptionManager from "../services/option_manager";
-import { useShowSessionBox } from "../services/option_manager_hooks";
+import { useSessions, useShowSessionBox } from "../services/option_manager_hooks";
+import SessionManager, { SessionProps } from "../services/session_manager";
 
-type SessionProps = {
-    name: string,
-    id: number,
-}
-
-type SnapshotProps = {
-    datetime: string,
-    id: number,
-}
 
 
 type SessionBoxProps = {
-    sessions?: SessionProps[];
     optionManager?: OptionManager;
+    sessionManager?: SessionManager;
     onClose: () => void;
 }
 
 function SessionBox(props: SessionBoxProps) {
-    const { sessions, optionManager, onClose } = props;
+    const { optionManager, sessionManager, onClose } = props;
     
+    const sessions = useSessions(sessionManager!);
     const showSessionBox = useShowSessionBox(optionManager!);
 
     const [selectedSession, setSelectedSession] = useState<SessionProps | null>(null);
@@ -32,7 +25,17 @@ function SessionBox(props: SessionBoxProps) {
         const session = sessions?.find(
             s => s.id === Number(event.target.value)
         );
-        setSelectedSession(session ?? null);
+        if (session) {
+            setSelectedSession(session);
+            optionManager?.setSelectedSessionId(session?.id ?? undefined);
+            optionManager?.setSessionModeEnabled(true);
+        }
+    };
+
+    const handleSnapshotPressed = () => {
+        if (!selectedSession) return;
+        // for demo, just alert snapshot datetime. In real implementation, would load snapshot texts into simplifier
+        alert(`Snapshot taken at ${new Date(selectedSession.snapshots[0].datetime).toLocaleString()}`);
     };
 
 
@@ -40,27 +43,38 @@ function SessionBox(props: SessionBoxProps) {
     <Paper hidden={!showSessionBox} elevation={6} sx={{ padding: 1 }} >
         <Box
         sx={{
-          display: "flex",
-          justifyContent: "flex-end",
-          mb: 1,
+            display: "flex",
+            justifyContent: "flex-end",
+            mb: 1,
         }}
-      >
-        <IconButton size="small" onClick={onClose}>
-          <CloseIcon />
-        </IconButton>
-      </Box>
-        <Select
-            labelId="sessions-dropdown-label"
-            id="sessions-dropdown"
-            value={selectedSession?.id ?? ""}
-            label="Sessions"
-            onChange={handleChange}
-            fullWidth
         >
-            {sessions?.map(session => (
-                <MenuItem key={session.id} value={session.id}>{session.name}</MenuItem>
+        <IconButton size="small" onClick={onClose}>
+            <CloseIcon />
+        </IconButton>
+        </Box>
+        <FormControl fullWidth>
+            <InputLabel id="sessions-dropdown-label">Sessions</InputLabel>
+            <Select
+                labelId="sessions-dropdown-label"
+                id="sessions-dropdown"
+                value={selectedSession?.id || ""}
+                label="Sessions"
+                onChange={handleChange}
+                fullWidth
+            >
+                {sessions?.map(session => (
+                    <MenuItem key={session.id} value={session.id}>{session.name}</MenuItem>
+                ))}
+            </Select>
+        </FormControl>
+        {/* snapshots here */}
+        <List>
+            {selectedSession?.snapshots.map((snapshot, index) => (
+                <ListItemButton key={index} sx={{ flexDirection: 'column', alignItems: 'flex-start' }} onClick={handleSnapshotPressed}>
+                    <Box sx={{ fontSize: "0.8em", color: "#666" }}>{new Date(snapshot.datetime).toLocaleString()}</Box>
+                </ListItemButton>
             ))}
-        </Select>
+        </List>
     </Paper>);
 }
 

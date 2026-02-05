@@ -6,6 +6,7 @@ type OptionManagerProps = {
     showSessionBox?: boolean;
     selectedSessionId?: number;
     ownerId?: number;
+    sessionModeEnabled?: boolean;
 };
 
 type Listener = () => void;
@@ -18,6 +19,7 @@ class OptionManager {
     private selectedCtxtRetentionScores: string[] = [];
     private selectedSessionId: number | undefined;
     private ownerId: number | undefined;
+    private sessionModeEnabled = false;
 
     private listeners = new Set<Listener>();
 
@@ -39,7 +41,8 @@ class OptionManager {
         selectedCtxtRetentionScores,
         showSessionBox,
         selectedSessionId,
-        ownerId
+        ownerId,
+        sessionModeEnabled,
     }: OptionManagerProps) {
         if (sentenceSuggestEnabled !== undefined) this.sentenceSuggestEnabled = sentenceSuggestEnabled;
         if (synonymModeEnabled !== undefined) this.synonymModeEnabled = synonymModeEnabled;
@@ -48,6 +51,7 @@ class OptionManager {
         if (selectedCtxtRetentionScores) this.selectedCtxtRetentionScores = selectedCtxtRetentionScores;
         if (selectedSessionId !== undefined) this.selectedSessionId = selectedSessionId;
         if (ownerId !== undefined) this.ownerId = ownerId;
+        if (sessionModeEnabled !== undefined) this.sessionModeEnabled = sessionModeEnabled;
     }
 
     setSentenceSuggestEnabled(enabled: boolean) {
@@ -125,6 +129,17 @@ class OptionManager {
 
     getOwnerId(): number | undefined {
         return this.ownerId;
+    }
+
+    setSessionModeEnabled(enabled: boolean) {
+        if (this.sessionModeEnabled !== enabled) {
+            this.sessionModeEnabled = enabled;
+            this.notify();
+        }
+    }
+    
+    isSessionModeEnabled(): boolean {
+        return this.sessionModeEnabled;
     }
 }
 

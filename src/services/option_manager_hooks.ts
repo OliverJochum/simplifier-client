@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import OptionManager from "./option_manager";
+import SessionManager from "./session_manager";
 
 function useSentenceSuggestEnabled(optionManager: OptionManager) {
     return useSyncExternalStore(
@@ -50,4 +51,18 @@ function useOwnerId(optionManager: OptionManager) {
     );
 }
 
-export { useSentenceSuggestEnabled, useSynonymModeEnabled, useShowSessionBox, useSelectedLegibilityScores, useSelectedCtxtRetentionScores, useSelectedSessionId, useOwnerId };
+function useSessions(sessionManager: SessionManager) {
+    return useSyncExternalStore(
+        sessionManager.subscribe.bind(sessionManager),
+        () => sessionManager.getSessions()
+    );
+}
+
+function useSessionModeEnabled(optionManager: OptionManager) {
+    return useSyncExternalStore(
+        optionManager.subscribe.bind(optionManager),
+        () => optionManager.isSessionModeEnabled()
+    );
+}
+
+export { useSentenceSuggestEnabled, useSynonymModeEnabled, useShowSessionBox, useSelectedLegibilityScores, useSelectedCtxtRetentionScores, useSelectedSessionId, useOwnerId, useSessions, useSessionModeEnabled };

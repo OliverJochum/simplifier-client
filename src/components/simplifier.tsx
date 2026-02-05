@@ -6,7 +6,7 @@ import OptionManager from "../services/option_manager";
 import Scorecard from "./scorecard";
 import { analyzeService } from "../services/analyze_service";
 import { sessionService } from "../services/session_service";
-import { useOwnerId, useSelectedCtxtRetentionScores, useSelectedLegibilityScores, useSelectedSessionId } from "../services/option_manager_hooks";
+import { useOwnerId, useSelectedCtxtRetentionScores, useSelectedLegibilityScores, useSelectedSessionId, useSessionModeEnabled } from "../services/option_manager_hooks";
 
 type SimplifierProps = {
     optionManager?: OptionManager;
@@ -24,6 +24,7 @@ function Simplifier({ optionManager }: SimplifierProps) {
     const selectedCtxtRetentionScores = useSelectedCtxtRetentionScores(optionManager!);
     const selectedSessionId = useSelectedSessionId(optionManager!);
     const ownerId = useOwnerId(optionManager!);
+    const sessionModeEnabled = useSessionModeEnabled(optionManager!);
 
     const updateOutputSetterRef = (val: string) => {
         outputSetterRef.current?.(val);
@@ -120,8 +121,9 @@ function Simplifier({ optionManager }: SimplifierProps) {
     //         });
     // }, [ownerId, selectedSessionId, optionManager]);
 
+    // Create snapshot on input/output text change with debounce, only if !sessionModeEnabled so that loaded snapshots do not create new snapshots
     useEffect(() => {
-        if (!ownerId || !selectedSessionId || (!inputText && !outputText)) return;
+        if (!ownerId || !selectedSessionId || (!inputText && !outputText) || sessionModeEnabled) return;
 
         console.log("Creating snapshot from effect", selectedSessionId, ownerId);
         const timeout = setTimeout(() => {
@@ -134,7 +136,7 @@ function Simplifier({ optionManager }: SimplifierProps) {
         }, 5000);
 
         return () => clearTimeout(timeout); // before effect runs again, clear timeout (in case of text change)
-    }, [inputText, outputText, selectedSessionId, ownerId]);
+    }, [inputText, outputText, selectedSessionId, ownerId, sessionModeEnabled]);
 
     return (
         <div>
