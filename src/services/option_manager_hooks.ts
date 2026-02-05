@@ -65,4 +65,20 @@ function useSessionModeEnabled(optionManager: OptionManager) {
     );
 }
 
-export { useSentenceSuggestEnabled, useSynonymModeEnabled, useShowSessionBox, useSelectedLegibilityScores, useSelectedCtxtRetentionScores, useSelectedSessionId, useOwnerId, useSessions, useSessionModeEnabled };
+function useSnapshotToPopulate(sessionManager: SessionManager) {
+    return useSyncExternalStore(
+        sessionManager.subscribe.bind(sessionManager),
+        () => sessionManager.getSnapshotToPopulate()
+    );
+}  
+
+export { 
+    useSentenceSuggestEnabled,
+    useSynonymModeEnabled, 
+    useShowSessionBox, useSelectedLegibilityScores, 
+    useSelectedCtxtRetentionScores, 
+    useSelectedSessionId, 
+    useOwnerId, useSessions, 
+    useSessionModeEnabled, 
+    useSnapshotToPopulate 
+};

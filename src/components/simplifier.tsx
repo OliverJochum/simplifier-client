@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { simplifyService } from "../services/simplify_service";
 import IOTextBox from "./iotextbox";
 import Grid from "@mui/material/Grid";
@@ -6,18 +6,27 @@ import OptionManager from "../services/option_manager";
 import Scorecard from "./scorecard";
 import { analyzeService } from "../services/analyze_service";
 import { sessionService } from "../services/session_service";
-import { useOwnerId, useSelectedCtxtRetentionScores, useSelectedLegibilityScores, useSelectedSessionId, useSessionModeEnabled } from "../services/option_manager_hooks";
+import { useOwnerId, useSelectedCtxtRetentionScores, useSelectedLegibilityScores, useSelectedSessionId, useSessionModeEnabled, useSnapshotToPopulate } from "../services/option_manager_hooks";
+import SessionManager from "../services/session_manager";
 
 type SimplifierProps = {
     optionManager?: OptionManager;
+    sessionManager?: SessionManager;
 }
 
-function Simplifier({ optionManager }: SimplifierProps) {
+function Simplifier({ optionManager, sessionManager }: SimplifierProps) {
+    // values for whats in the textboxes
     const [inputText, setInputText] = useState("");
     const [outputText, setOutputText] = useState("");
+
+    // state for holding text that was in textboxes when a snapshot is loaded to replace current text, to allow reverting back to it
+    const [currentInputText, setCurrentInputText] = useState("");
+    const [currentOutputText, setCurrentOutputText] = useState("");
+
     const [inputScores, setInputScores] = useState<{ [key: string]: number | 0 }>({});
     const [outputScores, setOutputScores] = useState<{ [key: string]: number | 0 }>({});
     const [ctxtRetentionScores, setCtxtRetentionScores] = useState<{ [key: string]: number | 0 }>({});
+    const inputSetterRef = useRef<(val: string) => void>(() => { });
     const outputSetterRef = useRef<(val: string) => void>(() => { });
 
     const selectedLegibilityScores = useSelectedLegibilityScores(optionManager!);
@@ -25,10 +34,15 @@ function Simplifier({ optionManager }: SimplifierProps) {
     const selectedSessionId = useSelectedSessionId(optionManager!);
     const ownerId = useOwnerId(optionManager!);
     const sessionModeEnabled = useSessionModeEnabled(optionManager!);
+    const snapshotToPopulate = useSnapshotToPopulate(sessionManager!);
 
     const updateOutputSetterRef = (val: string) => {
         outputSetterRef.current?.(val);
     }
+
+    // const updateInputSetterRef = (val: string) => {
+    //     inputSetterRef.current?.(val);
+    // }
 
     const handleSimplify = () => {
         simplifyService.callSimplifyGenTxt(inputText, "openai").then(res => updateOutputSetterRef(res)).catch(err => {
@@ -138,13 +152,19 @@ function Simplifier({ optionManager }: SimplifierProps) {
         return () => clearTimeout(timeout); // before effect runs again, clear timeout (in case of text change)
     }, [inputText, outputText, selectedSessionId, ownerId, sessionModeEnabled]);
 
+    useEffect(() => {
+        if (!sessionModeEnabled || !snapshotToPopulate) return;
+        inputSetterRef.current(snapshotToPopulate.input);
+        outputSetterRef.current(snapshotToPopulate.output);
+    }, [sessionModeEnabled, snapshotToPopulate]);
+
     return (
         <div>
             <div>
                 <Grid container spacing={1} sx={{ marginBottom: 1 }}>
                     <Grid size={6}>
                         <Scorecard label="Legibility" scores={Object.entries(inputScores).map(([name, value]) => ({ name, value: value || 0 })) || []} />
-                        <IOTextBox onTextChange={setInputText} sentenceAPICallback={simplifyService.callSimplifySentenceSimplify} model="openai" optionManager={optionManager} />
+                        <IOTextBox onTextChange={setInputText} setTextFromParent={(setter: (val: string) => void) => {inputSetterRef.current = setter; }} sentenceAPICallback={simplifyService.callSimplifySentenceSimplify} model="openai" optionManager={optionManager} />
                     </Grid>
                     <Grid size={6}>
                         <Grid container spacing={1} sx={{ marginBottom: 1 }}>

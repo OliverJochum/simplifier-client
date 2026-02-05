@@ -17,6 +17,7 @@ type Listener = () => void;
 class SessionManager {
     private ownerId: number | undefined;
     private sessions: SessionProps[] | undefined;
+    private snapshotToPopulate: SnapshotProps | null = null;
 
     private listeners = new Set<Listener>();
 
@@ -34,6 +35,7 @@ class SessionManager {
     constructor(ownerId?: number) {
         this.ownerId = ownerId;
         this.sessions = undefined;
+        this.snapshotToPopulate = null;
 
         if (this.ownerId !== undefined) {
             this.initializeForUser(this.ownerId);
@@ -65,6 +67,17 @@ class SessionManager {
             this.ownerId = ownerId;
             this.notify();
         }
+    }
+
+    setSnapshotToPopulate(snapshot: SnapshotProps | null) {
+        if (this.snapshotToPopulate !== snapshot) {
+            this.snapshotToPopulate = snapshot;
+            this.notify();
+        }
+    }
+    
+    getSnapshotToPopulate(): SnapshotProps | null {
+        return this.snapshotToPopulate;
     }
 }
 
