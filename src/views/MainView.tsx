@@ -27,7 +27,7 @@ function MainView() {
         <Box sx={{ flexGrow: 1, padding: 2 }}>
             <Grid container spacing={1}>
                 <Grid size={9}>
-                    <Simplifier optionManager={optionManager} sessionManager={sessionManager}/>
+                    <Simplifier optionManager={optionManager} sessionManager={sessionManager} />
                 </Grid>
                 <Grid size={3}>
                     <OptionVBar optionManager={optionManager} />

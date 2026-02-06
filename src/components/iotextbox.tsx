@@ -8,14 +8,15 @@ import { MATCH_WORD_REGEX, MATCH_SENTENCE_REGEX } from '../utils/constants';
 import OptionManager from '../services/option_manager';
 import { simplifyService } from '../services/simplify_service';
 import { useSentenceSuggestEnabled, useSynonymModeEnabled } from '../services/option_manager_hooks';
+import { SystemIntent } from './simplifier';
 
 export type VirtualAnchor = {
     getBoundingClientRect: () => DOMRect;
 };
 
 type IOTextBoxProps = {
-    onTextChange?: (value: string) => void;
-    setTextFromParent?: (setter: (val: string) => void) => void;
+    textChangeWithinTextareaCallback?: (value: string, source: SystemIntent) => void;
+    setTextFromParent?: (setter: (val: string, source: SystemIntent) => void) => void;
     sentenceAPICallback?: (input: string, selected_service: string) => Promise<any>;
     model?: string;
     optionManager?: OptionManager;
@@ -23,16 +24,19 @@ type IOTextBoxProps = {
 
 /**
  * Input / Output text box component 
- * @param onTextChange Callback when text changes
+ * @param textChangeWithinTextareaCallback Callback when text changes in textbox
  * @param setTextFromParent Function to allow parent to set text
  * @param sentenceAPICallback Callback to fetch sentence suggestions/simplifications
  * @param model AI Model to use for sentence suggestions/simplifications
  * @param optionManager OptionManager to get settings from Option vertical bar
  * @return IOTextBox component
  */
-function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, model, optionManager }: IOTextBoxProps) {
+function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, sentenceAPICallback, model, optionManager }: IOTextBoxProps) {
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
     const overlayRef = useRef<HTMLDivElement>(null);
+    const lastSourceRef = useRef<SystemIntent | null>(null);
+    const isParentUpdateRef = useRef(false);
+    const lastNotifiedValueRef = useRef<string | null>(null);
 
     const [text, setText] = useState("");
 
@@ -133,17 +137,7 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, model
     useEffect(() => {
         setWords(text.match(MATCH_WORD_REGEX) || []);
         setSentences(text.match(MATCH_SENTENCE_REGEX) || []);
-        if (onTextChange) {
-            onTextChange(text);
-        }
-    }, [text, onTextChange]);
-
-    // allow parent to set text (output box user case)
-    useEffect(() => {
-        if (setTextFromParent) {
-        setTextFromParent(setText);
-        }
-    }, [setTextFromParent]);
+    }, [text]);
 
     // debugging crap
     // useEffect(() => {
@@ -209,8 +203,41 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, model
         IOTextBoxUtils.highlightWord(newText, selectedWordIndex);
         setSuggestedSynonyms([]);
         setSelectedWordIndex(null); 
-
     }
+
+    // allow parent to set text 
+    useEffect(() => {
+        if (!setTextFromParent) return;
+
+        setTextFromParent((val, source) => {
+            isParentUpdateRef.current = true;
+            lastSourceRef.current = source;
+            setText(val);
+        });
+    }, [setTextFromParent]);
+
+    // onchange shouldn't fire if value is changed programmatically
+    const handleChangeInTextarea = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const val = e.target.value;
+
+        isParentUpdateRef.current = false;
+        lastSourceRef.current = "commit";
+
+        setText(val);
+        textChangeWithinTextareaCallback?.(val, "commit");
+    };
+
+    // when text changes, notify parent via callback
+    useEffect(() => {
+        if (!textChangeWithinTextareaCallback) return;
+        if (!lastSourceRef.current) return;
+        if (text === lastNotifiedValueRef.current) return;
+
+        lastNotifiedValueRef.current = text;
+        textChangeWithinTextareaCallback(text, lastSourceRef.current);
+
+        isParentUpdateRef.current = false;
+    }, [text, textChangeWithinTextareaCallback]);
 
     const sharedStyles = {
         width: "100%",
@@ -275,7 +302,7 @@ function IOTextBox({ onTextChange, setTextFromParent, sentenceAPICallback, model
                 zIndex: 1,
             }}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={handleChangeInTextarea}
             onSelect={updateCursor}
             onKeyUp={() => { updateCursor(); updateAnchor(); }}
             onMouseUp={() => { updateCursor(); updateAnchor(); }}

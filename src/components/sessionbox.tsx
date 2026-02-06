@@ -1,5 +1,5 @@
 import { Box, FormControl, IconButton, InputLabel, List, ListItemButton, MenuItem, Paper, Select, SelectChangeEvent } from "@mui/material"
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import CloseIcon from "@mui/icons-material/Close";
 import OptionManager from "../services/option_manager";
 import { useSessions, useShowSessionBox } from "../services/option_manager_hooks";
@@ -36,6 +36,14 @@ function SessionBox(props: SessionBoxProps) {
         if (!selectedSession) return;
         sessionManager?.setSnapshotToPopulate(snapshot);
     };
+
+    useEffect(() => {
+        if (!optionManager) return;
+
+        const shouldEnableSessionMode = showSessionBox && selectedSession !== null;
+
+        optionManager.setSessionModeEnabled(shouldEnableSessionMode);
+    }, [showSessionBox, selectedSession, optionManager]);
 
 
     return (

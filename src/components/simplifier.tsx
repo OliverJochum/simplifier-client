@@ -14,20 +14,23 @@ type SimplifierProps = {
     sessionManager?: SessionManager;
 }
 
+// Commit means a change in textbox that the user has finalized (typing, word/sentence replacement, simplify)
+// preview means a change in textbox not yet finalized by user (snapshot preview)
+export type SystemIntent = "commit" | "preview";
+
 function Simplifier({ optionManager, sessionManager }: SimplifierProps) {
     // values for whats in the textboxes
-    const [inputText, setInputText] = useState("");
-    const [outputText, setOutputText] = useState("");
+    // const [inputText, setInputText] = useState("");
+    // const [outputText, setOutputText] = useState("");
 
-    // state for holding text that was in textboxes when a snapshot is loaded to replace current text, to allow reverting back to it
-    const [currentInputText, setCurrentInputText] = useState("");
-    const [currentOutputText, setCurrentOutputText] = useState("");
+    const [textInTextAreas, setTextInTextAreas] = useState({ input: "", output: "" });
+    const [textCommittedByUser, setTextCommittedByUser] = useState({ input: "", output: "" });
 
     const [inputScores, setInputScores] = useState<{ [key: string]: number | 0 }>({});
     const [outputScores, setOutputScores] = useState<{ [key: string]: number | 0 }>({});
     const [ctxtRetentionScores, setCtxtRetentionScores] = useState<{ [key: string]: number | 0 }>({});
-    const inputSetterRef = useRef<(val: string) => void>(() => { });
-    const outputSetterRef = useRef<(val: string) => void>(() => { });
+    const inputSetterRef = useRef<(val: string, source: SystemIntent) => void>(() => { });
+    const outputSetterRef = useRef<(val: string, source: SystemIntent) => void>(() => { });
 
     const selectedLegibilityScores = useSelectedLegibilityScores(optionManager!);
     const selectedCtxtRetentionScores = useSelectedCtxtRetentionScores(optionManager!);
@@ -36,16 +39,51 @@ function Simplifier({ optionManager, sessionManager }: SimplifierProps) {
     const sessionModeEnabled = useSessionModeEnabled(optionManager!);
     const snapshotToPopulate = useSnapshotToPopulate(sessionManager!);
 
-    const updateOutputSetterRef = (val: string) => {
-        outputSetterRef.current?.(val);
+    const updateOutputSetterRef = (val: string, source: SystemIntent) => {
+        outputSetterRef.current?.(val, source);
     }
 
-    // const updateInputSetterRef = (val: string) => {
-    //     inputSetterRef.current?.(val);
+    const updateInputSetterRef = (val: string, source: SystemIntent) => {
+        inputSetterRef.current?.(val, source);
+    }
+
+    const handleTextInInputAreaChange = (value: string, source: SystemIntent) => {
+        setTextInTextAreas(prev => {
+            if (prev.input === value) return prev;
+            return { ...prev, input: value };
+        });
+
+        if (source === "commit") {
+            setTextCommittedByUser(prev => {
+                if (prev.input === value) return prev;
+                return { ...prev, input: value };
+            });
+        }
+    }
+
+    const handleTextInOutputAreaChange = (value: string, source: SystemIntent) => {
+        setTextInTextAreas(prev => {
+            if (prev.output === value) return prev;
+            return { ...prev, output: value };
+        });
+
+        if (source === "commit") {
+            setTextCommittedByUser(prev => {
+                if (prev.output === value) return prev;
+                return { ...prev, output: value };
+            });
+        }
+    }
+    
+    // this will need to live in a useEffect
+    // const commitPreviewChanges = () => {
+    //     updateInputSetterRef(textInTextAreas.input, "commit");
+    //     updateOutputSetterRef(textInTextAreas.output, "commit");
+    //     setTextCommittedByUser({ input: textInTextAreas.input, output: textInTextAreas.output });
     // }
 
     const handleSimplify = () => {
-        simplifyService.callSimplifyGenTxt(inputText, "openai").then(res => updateOutputSetterRef(res)).catch(err => {
+        simplifyService.callSimplifyGenTxt(textInTextAreas.input, "openai").then(res => updateOutputSetterRef(res, "commit")).catch(err => {
             console.error("Error simplifying text:", err);
         });
     };
@@ -77,7 +115,7 @@ function Simplifier({ optionManager, sessionManager }: SimplifierProps) {
     useEffect(() => {
         const fetchInputLegibilityScores = async () => {
             const scores = selectedLegibilityScores;
-            const results = await Promise.all(scores.map(score => handleReadabilityScore(score, inputText)));
+            const results = await Promise.all(scores.map(score => handleReadabilityScore(score, textInTextAreas.input)));
             const newScores: Record<string, number> = {};
             scores.forEach((score, i) => {
                 newScores[score] = results[i];
@@ -85,12 +123,12 @@ function Simplifier({ optionManager, sessionManager }: SimplifierProps) {
             setInputScores(newScores);
         };
         fetchInputLegibilityScores();
-    }, [inputText, selectedLegibilityScores]);
+    }, [textInTextAreas.input, selectedLegibilityScores]);
 
     useEffect(() => {
         const fetchOutputLegibilityScores = async () => {
             const scores = selectedLegibilityScores;
-            const results = await Promise.all(scores.map(score => handleReadabilityScore(score, outputText)));
+            const results = await Promise.all(scores.map(score => handleReadabilityScore(score, textInTextAreas.output)));
             const newScores: Record<string, number> = {};
             scores.forEach((score, i) => {
                 newScores[score] = results[i];
@@ -98,12 +136,12 @@ function Simplifier({ optionManager, sessionManager }: SimplifierProps) {
             setOutputScores(newScores);
         };
         fetchOutputLegibilityScores();
-    }, [outputText, selectedLegibilityScores]);
+    }, [textInTextAreas.output, selectedLegibilityScores]);
 
     useEffect(() => {
         const fetchCtxtRetentionScores = async () => {
             const scores = selectedCtxtRetentionScores;
-            const results = await Promise.all(scores.map(score => handleCtxtRetentionScore(score, outputText, inputText)));
+            const results = await Promise.all(scores.map(score => handleCtxtRetentionScore(score, textInTextAreas.output, textInTextAreas.input)));
             const newScores: Record<string, number> = {};
             scores.forEach((score, i) => {
                 newScores[score] = results[i];
@@ -111,7 +149,7 @@ function Simplifier({ optionManager, sessionManager }: SimplifierProps) {
             setCtxtRetentionScores(newScores);
         }
         fetchCtxtRetentionScores();
-    }, [inputText, outputText, selectedCtxtRetentionScores]);
+    }, [textInTextAreas.input, textInTextAreas.output, selectedCtxtRetentionScores]);
 
     // const onSentenceSelect = (sentence: string | null, sentenceIndex: number | null) => {
     //     if (!sentence) return;
@@ -137,26 +175,35 @@ function Simplifier({ optionManager, sessionManager }: SimplifierProps) {
 
     // Create snapshot on input/output text change with debounce, only if !sessionModeEnabled so that loaded snapshots do not create new snapshots
     useEffect(() => {
-        if (!ownerId || !selectedSessionId || (!inputText && !outputText) || sessionModeEnabled) return;
+        if (!ownerId || !selectedSessionId || (!textInTextAreas.input && !textInTextAreas.output) || sessionModeEnabled) return;
 
         console.log("Creating snapshot from effect", selectedSessionId, ownerId);
         const timeout = setTimeout(() => {
             sessionService.createSnapshot(
-            inputText,
-            outputText,
+            textInTextAreas.input,
+            textInTextAreas.output,
             selectedSessionId,
             ownerId
             );
         }, 5000);
 
         return () => clearTimeout(timeout); // before effect runs again, clear timeout (in case of text change)
-    }, [inputText, outputText, selectedSessionId, ownerId, sessionModeEnabled]);
+    }, [textInTextAreas.input, textInTextAreas.output, selectedSessionId, ownerId, sessionModeEnabled]);
 
     useEffect(() => {
         if (!sessionModeEnabled || !snapshotToPopulate) return;
-        inputSetterRef.current(snapshotToPopulate.input);
-        outputSetterRef.current(snapshotToPopulate.output);
+        updateInputSetterRef(snapshotToPopulate.input, "preview");
+        updateOutputSetterRef(snapshotToPopulate.output, "preview");
     }, [sessionModeEnabled, snapshotToPopulate]);
+
+    useEffect(() => {
+        if (sessionModeEnabled) return;
+        const discardPreviewChanges = () => {
+            updateInputSetterRef(textCommittedByUser.input, "commit");
+            updateOutputSetterRef(textCommittedByUser.output, "commit");
+        };
+        discardPreviewChanges();
+    }, [sessionModeEnabled, textCommittedByUser.input, textCommittedByUser.output]);
 
     return (
         <div>
@@ -164,7 +211,13 @@ function Simplifier({ optionManager, sessionManager }: SimplifierProps) {
                 <Grid container spacing={1} sx={{ marginBottom: 1 }}>
                     <Grid size={6}>
                         <Scorecard label="Legibility" scores={Object.entries(inputScores).map(([name, value]) => ({ name, value: value || 0 })) || []} />
-                        <IOTextBox onTextChange={setInputText} setTextFromParent={(setter: (val: string) => void) => {inputSetterRef.current = setter; }} sentenceAPICallback={simplifyService.callSimplifySentenceSimplify} model="openai" optionManager={optionManager} />
+                        <IOTextBox 
+                            textChangeWithinTextareaCallback={handleTextInInputAreaChange} 
+                            setTextFromParent={(setter: (val: string, source: SystemIntent) => void) => {inputSetterRef.current = setter; }} 
+                            sentenceAPICallback={simplifyService.callSimplifySentenceSimplify} 
+                            model="openai" 
+                            optionManager={optionManager}  
+                        />
                     </Grid>
                     <Grid size={6}>
                         <Grid container spacing={1} sx={{ marginBottom: 1 }}>
@@ -175,7 +228,13 @@ function Simplifier({ optionManager, sessionManager }: SimplifierProps) {
                                 <Scorecard label="Legibility" scores={Object.entries(outputScores).map(([name, value]) => ({ name, value: value || 0 })) || []} />
                             </Grid>
                         </Grid>
-                        <IOTextBox onTextChange={setOutputText} setTextFromParent={(setter: (val: string) => void) => { outputSetterRef.current = setter; }} sentenceAPICallback={simplifyService.callSimplifySentenceSuggest} model="openai" optionManager={optionManager} />
+                        <IOTextBox 
+                            textChangeWithinTextareaCallback={handleTextInOutputAreaChange} 
+                            setTextFromParent={(setter: (val: string, source: SystemIntent) => void) => { outputSetterRef.current = setter; }} 
+                            sentenceAPICallback={simplifyService.callSimplifySentenceSuggest} 
+                            model="openai" 
+                            optionManager={optionManager} 
+                        />
                     </Grid>
                 </Grid>
             </div>
