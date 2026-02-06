@@ -1,5 +1,5 @@
-import { Box, FormControl, IconButton, InputLabel, List, ListItemButton, MenuItem, Paper, Select, SelectChangeEvent } from "@mui/material"
-import { useEffect, useState } from "react";
+import { Box, Button, FormControl, IconButton, InputLabel, List, ListItemButton, MenuItem, Paper, Select, SelectChangeEvent } from "@mui/material"
+import { useEffect, useRef, useState } from "react";
 import CloseIcon from "@mui/icons-material/Close";
 import OptionManager from "../services/option_manager";
 import { useSessions, useShowSessionBox, useSnapshotToPopulate } from "../services/option_manager_hooks";
@@ -11,16 +11,19 @@ type SessionBoxProps = {
     optionManager?: OptionManager;
     sessionManager?: SessionManager;
     onClose: () => void;
+    onCommit: () => void;
 }
 
 function SessionBox(props: SessionBoxProps) {
-    const { optionManager, sessionManager, onClose } = props;
+    const { optionManager, sessionManager, onClose, onCommit } = props;
     
     const sessions = useSessions(sessionManager!);
     const showSessionBox = useShowSessionBox(optionManager!);
     const snapshotToPopulate = useSnapshotToPopulate(sessionManager!);
 
     const [selectedSession, setSelectedSession] = useState<SessionProps | null>(null);
+
+    const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
     const handleChange = (event: SelectChangeEvent<number>) => {
         const session = sessions?.find(
@@ -30,6 +33,7 @@ function SessionBox(props: SessionBoxProps) {
             setSelectedSession(session);
             optionManager?.setSelectedSessionId(session?.id ?? undefined);
             optionManager?.setSessionModeEnabled(true);
+            sessionManager?.setSnapshotToPopulate(null);
         }
     };
 
@@ -46,6 +50,13 @@ function SessionBox(props: SessionBoxProps) {
         optionManager.setSessionModeEnabled(shouldEnableSessionMode);
     }, [showSessionBox, selectedSession, optionManager]);
 
+    useEffect(() => {
+    if (!snapshotToPopulate) return;
+        itemRefs.current[snapshotToPopulate.datetime]?.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest",
+        });
+    }, [snapshotToPopulate]);
 
     return (
     <Paper hidden={!showSessionBox} elevation={6} sx={{ padding: 1 }} >
@@ -75,6 +86,7 @@ function SessionBox(props: SessionBoxProps) {
                 ))}
             </Select>
         </FormControl>
+        <Button variant="contained" size="small" onClick={onCommit} disabled={!selectedSession}>Restore snapshot</Button>
         <List>
             {selectedSession?.snapshots.map((snapshot, index) => {
                 const isActive = snapshotToPopulate?.datetime === snapshot.datetime;
@@ -82,6 +94,7 @@ function SessionBox(props: SessionBoxProps) {
                     <ListItemButton
                         key={index}
                         selected={isActive}
+                        ref={(el) => {itemRefs.current[snapshot.datetime] = el;}}
                         onClick={() => handleSnapshotPressed(snapshot)}
                         sx={{
                             flexDirection: "column",

@@ -1,4 +1,4 @@
-import { use, useEffect, useRef, useState } from "react";
+import { forwardRef, use, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { simplifyService } from "../services/simplify_service";
 import IOTextBox from "./iotextbox";
 import Grid from "@mui/material/Grid";
@@ -14,11 +14,16 @@ type SimplifierProps = {
     sessionManager?: SessionManager;
 }
 
+export type SimplifierHandle = {
+    commitPreviewChanges: () => void;
+};
+
 // Commit means a change in textbox that the user has finalized (typing, word/sentence replacement, simplify)
 // preview means a change in textbox not yet finalized by user (snapshot preview)
 export type SystemIntent = "commit" | "preview";
 
-function Simplifier({ optionManager, sessionManager }: SimplifierProps) {
+const Simplifier = forwardRef<SimplifierHandle, SimplifierProps>((props, ref) => {
+    const { optionManager, sessionManager } = props;
     // values for whats in the textboxes
     // const [inputText, setInputText] = useState("");
     // const [outputText, setOutputText] = useState("");
@@ -75,12 +80,15 @@ function Simplifier({ optionManager, sessionManager }: SimplifierProps) {
         }
     }
     
-    // this will need to live in a useEffect
-    // const commitPreviewChanges = () => {
-    //     updateInputSetterRef(textInTextAreas.input, "commit");
-    //     updateOutputSetterRef(textInTextAreas.output, "commit");
-    //     setTextCommittedByUser({ input: textInTextAreas.input, output: textInTextAreas.output });
-    // }
+    const commitPreviewChanges = () => {
+        updateInputSetterRef(textInTextAreas.input, "commit");
+        updateOutputSetterRef(textInTextAreas.output, "commit");
+        setTextCommittedByUser({ input: textInTextAreas.input, output: textInTextAreas.output });
+    }
+
+    useImperativeHandle(ref, () => ({
+        commitPreviewChanges,
+    }));
 
     const handleSimplify = () => {
         simplifyService.callSimplifyGenTxt(textInTextAreas.input, "openai").then(res => updateOutputSetterRef(res, "commit")).catch(err => {
@@ -243,6 +251,6 @@ function Simplifier({ optionManager, sessionManager }: SimplifierProps) {
             <button id="simplifyButton" onClick={handleSimplify}>Simplify</button>
         </div>
     );
-}
+});
 
 export default Simplifier;
