@@ -194,6 +194,8 @@ function Simplifier({ optionManager, sessionManager }: SimplifierProps) {
         if (!sessionModeEnabled || !snapshotToPopulate) return;
         updateInputSetterRef(snapshotToPopulate.input, "preview");
         updateOutputSetterRef(snapshotToPopulate.output, "preview");
+
+        console.log(snapshotToPopulate);
     }, [sessionModeEnabled, snapshotToPopulate]);
 
     useEffect(() => {

@@ -2,7 +2,7 @@ import { Box, FormControl, IconButton, InputLabel, List, ListItemButton, MenuIte
 import { useEffect, useState } from "react";
 import CloseIcon from "@mui/icons-material/Close";
 import OptionManager from "../services/option_manager";
-import { useSessions, useShowSessionBox } from "../services/option_manager_hooks";
+import { useSessions, useShowSessionBox, useSnapshotToPopulate } from "../services/option_manager_hooks";
 import SessionManager, { SessionProps, SnapshotProps } from "../services/session_manager";
 
 
@@ -18,6 +18,7 @@ function SessionBox(props: SessionBoxProps) {
     
     const sessions = useSessions(sessionManager!);
     const showSessionBox = useShowSessionBox(optionManager!);
+    const snapshotToPopulate = useSnapshotToPopulate(sessionManager!);
 
     const [selectedSession, setSelectedSession] = useState<SessionProps | null>(null);
 
@@ -74,13 +75,34 @@ function SessionBox(props: SessionBoxProps) {
                 ))}
             </Select>
         </FormControl>
-        {/* snapshots here */}
         <List>
-            {selectedSession?.snapshots.map((snapshot, index) => (
-                <ListItemButton key={index} sx={{ flexDirection: 'column', alignItems: 'flex-start' }} onClick={() => handleSnapshotPressed(snapshot)}>
-                    <Box sx={{ fontSize: "0.8em", color: "#666" }}>{new Date(snapshot.datetime).toLocaleString()}</Box>
-                </ListItemButton>
-            ))}
+            {selectedSession?.snapshots.map((snapshot, index) => {
+                const isActive = snapshotToPopulate?.datetime === snapshot.datetime;
+                return (
+                    <ListItemButton
+                        key={index}
+                        selected={isActive}
+                        onClick={() => handleSnapshotPressed(snapshot)}
+                        sx={{
+                            flexDirection: "column",
+                            alignItems: "flex-start",
+                            "&:hover": {
+                                backgroundColor: "action.hover",
+                            },
+                            "&.Mui-selected": {
+                                backgroundColor: "action.selected",
+                            },
+                            "&.Mui-selected:hover": {
+                                backgroundColor: "action.selected",
+                            },
+                        }}
+                    >
+                        <Box sx={{ fontSize: "0.8em", color: "#666" }}>
+                            {new Date(snapshot.datetime).toLocaleString()}
+                        </Box>
+                    </ListItemButton>
+                );
+            })}
         </List>
     </Paper>);
 }
