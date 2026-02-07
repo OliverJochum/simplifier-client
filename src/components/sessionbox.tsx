@@ -1,10 +1,11 @@
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputLabel, List, ListItemButton, MenuItem, Paper, Select, SelectChangeEvent, TextField } from "@mui/material"
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, IconButton, InputLabel, List, ListItemButton, ListItemIcon, MenuItem, Paper, Select, SelectChangeEvent, TextField } from "@mui/material"
 import { useEffect, useRef, useState } from "react";
 import CloseIcon from "@mui/icons-material/Close";
 import OptionManager from "../services/option_manager";
 import { useOwnerId, useSessions, useShowSessionBox, useSnapshotToPopulate } from "../services/option_manager_hooks";
 import SessionManager, { SessionProps, SnapshotProps } from "../services/session_manager";
 import { sessionService } from "../services/session_service";
+import AddIcon from "@mui/icons-material/Add";
 
 
 
@@ -103,7 +104,20 @@ function SessionBox(props: SessionBoxProps) {
                 onChange={handleChange}
                 fullWidth
             >
-                <MenuItem onClick={() => {setCreateDialogOpen(true); setNewSessionName("");}}>Create new Session</MenuItem>
+                <MenuItem 
+                onClick={() => {setCreateDialogOpen(true); setNewSessionName("");}} 
+                sx={{
+                    mb: 0.5,
+                    borderRadius: 1,
+                    backgroundColor: "action.hover",
+                    fontWeight: 600,
+                }}>
+                    <ListItemIcon>
+                        <AddIcon />
+                    </ListItemIcon>
+                    Create new Session
+                </MenuItem>
+                <Divider />
                 {sessions?.map(session => (
                     <MenuItem key={session.id} value={session.id}>{session.name}</MenuItem>
                 ))}
