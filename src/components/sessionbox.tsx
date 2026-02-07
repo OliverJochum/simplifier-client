@@ -1,9 +1,10 @@
-import { Box, Button, FormControl, IconButton, InputLabel, List, ListItemButton, MenuItem, Paper, Select, SelectChangeEvent } from "@mui/material"
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputLabel, List, ListItemButton, MenuItem, Paper, Select, SelectChangeEvent, TextField } from "@mui/material"
 import { useEffect, useRef, useState } from "react";
 import CloseIcon from "@mui/icons-material/Close";
 import OptionManager from "../services/option_manager";
-import { useSessions, useShowSessionBox, useSnapshotToPopulate } from "../services/option_manager_hooks";
+import { useOwnerId, useSessions, useShowSessionBox, useSnapshotToPopulate } from "../services/option_manager_hooks";
 import SessionManager, { SessionProps, SnapshotProps } from "../services/session_manager";
+import { sessionService } from "../services/session_service";
 
 
 
@@ -20,10 +21,18 @@ function SessionBox(props: SessionBoxProps) {
     const sessions = useSessions(sessionManager!);
     const showSessionBox = useShowSessionBox(optionManager!);
     const snapshotToPopulate = useSnapshotToPopulate(sessionManager!);
+    const ownerId = useOwnerId(optionManager!);
+
+    const [createDialogOpen, setCreateDialogOpen] = useState(false);
+    const [newSessionName, setNewSessionName] = useState("");
 
     const [selectedSession, setSelectedSession] = useState<SessionProps | null>(null);
 
     const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+    const callSessionsForUser = async (userId: number) => {
+        sessionManager?.initializeForUser(userId);
+    }
 
     const handleChange = (event: SelectChangeEvent<number>) => {
         const session = sessions?.find(
@@ -35,6 +44,19 @@ function SessionBox(props: SessionBoxProps) {
             optionManager?.setSessionModeEnabled(true);
             sessionManager?.setSnapshotToPopulate(null);
         }
+        callSessionsForUser(ownerId!);
+    };
+
+    const handleCreateNewSession = async (name: string) => {
+        await sessionService.createSession(ownerId!, name).catch(err => console.error("Error creating session:", err));
+        await callSessionsForUser(ownerId!);
+    };
+
+    const handleSubmit = async () => {
+        if (!newSessionName.trim()) return;
+
+        await handleCreateNewSession(newSessionName.trim());
+        setCreateDialogOpen(false);
     };
 
     const handleSnapshotPressed = (snapshot: SnapshotProps) => {
@@ -81,6 +103,7 @@ function SessionBox(props: SessionBoxProps) {
                 onChange={handleChange}
                 fullWidth
             >
+                <MenuItem onClick={() => {setCreateDialogOpen(true); setNewSessionName("");}}>Create new Session</MenuItem>
                 {sessions?.map(session => (
                     <MenuItem key={session.id} value={session.id}>{session.name}</MenuItem>
                 ))}
@@ -117,6 +140,43 @@ function SessionBox(props: SessionBoxProps) {
                 );
             })}
         </List>
+        <Dialog
+            open={createDialogOpen}
+            onClose={() => setCreateDialogOpen(false)}
+            maxWidth="xs"
+            fullWidth
+            >
+            <DialogTitle>Create new session</DialogTitle>
+
+            <DialogContent>
+                <TextField
+                autoFocus
+                margin="dense"
+                label="Session name"
+                fullWidth
+                value={newSessionName}
+                onChange={(e) => setNewSessionName(e.target.value)}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" && newSessionName.trim()) {
+                    handleSubmit();
+                    }
+                }}
+                />
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={() => setCreateDialogOpen(false)}>
+                Cancel
+                </Button>
+
+                <Button
+                variant="contained"
+                disabled={!newSessionName.trim()}
+                onClick={handleSubmit}
+                >
+                Create
+                </Button>
+            </DialogActions>
+        </Dialog>
     </Paper>);
 }
 
