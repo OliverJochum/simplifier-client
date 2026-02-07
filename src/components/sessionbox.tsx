@@ -1,4 +1,4 @@
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, IconButton, InputLabel, List, ListItemButton, ListItemIcon, MenuItem, Paper, Select, SelectChangeEvent, TextField } from "@mui/material"
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, IconButton, InputLabel, List, ListItemButton, ListItemIcon, MenuItem, Paper, Select, SelectChangeEvent, Stack, TextField } from "@mui/material"
 import { useEffect, useRef, useState } from "react";
 import CloseIcon from "@mui/icons-material/Close";
 import OptionManager from "../services/option_manager";
@@ -90,70 +90,72 @@ function SessionBox(props: SessionBoxProps) {
             mb: 1,
         }}
         >
-        <IconButton size="small" onClick={onClose}>
-            <CloseIcon />
-        </IconButton>
+            <IconButton size="small" onClick={onClose}>
+                <CloseIcon />
+            </IconButton>
         </Box>
-        <FormControl fullWidth>
-            <InputLabel id="sessions-dropdown-label">Sessions</InputLabel>
-            <Select
-                labelId="sessions-dropdown-label"
-                id="sessions-dropdown"
-                value={selectedSession?.id || ""}
-                label="Sessions"
-                onChange={handleChange}
-                fullWidth
-            >
-                <MenuItem 
-                onClick={() => {setCreateDialogOpen(true); setNewSessionName("");}} 
-                sx={{
-                    mb: 0.5,
-                    borderRadius: 1,
-                    backgroundColor: "action.hover",
-                    fontWeight: 600,
-                }}>
-                    <ListItemIcon>
-                        <AddIcon />
-                    </ListItemIcon>
-                    Create new Session
-                </MenuItem>
-                <Divider />
-                {sessions?.map(session => (
-                    <MenuItem key={session.id} value={session.id}>{session.name}</MenuItem>
-                ))}
-            </Select>
-        </FormControl>
-        <Button variant="contained" size="small" onClick={onCommit} disabled={!selectedSession}>Restore snapshot</Button>
-        <List>
-            {selectedSession?.snapshots.map((snapshot, index) => {
-                const isActive = snapshotToPopulate?.datetime === snapshot.datetime;
-                return (
-                    <ListItemButton
-                        key={index}
-                        selected={isActive}
-                        ref={(el) => {itemRefs.current[snapshot.datetime] = el;}}
-                        onClick={() => handleSnapshotPressed(snapshot)}
-                        sx={{
-                            flexDirection: "column",
-                            alignItems: "flex-start",
-                            "&:hover": {
-                                backgroundColor: "action.hover",
-                            },
-                            "&.Mui-selected": {
-                                backgroundColor: "action.selected",
-                            },
-                            "&.Mui-selected:hover": {
-                                backgroundColor: "action.selected",
-                            },
-                        }}
-                    >
-                        <Box sx={{ fontSize: "0.8em", color: "#666" }}>
-                            {new Date(snapshot.datetime).toLocaleString()}
-                        </Box>
-                    </ListItemButton>
-                );
-            })}
-        </List>
+        <Stack spacing={1}>
+            <FormControl fullWidth>
+                <InputLabel id="sessions-dropdown-label">Sessions</InputLabel>
+                <Select
+                    labelId="sessions-dropdown-label"
+                    id="sessions-dropdown"
+                    value={selectedSession?.id || ""}
+                    label="Sessions"
+                    onChange={handleChange}
+                    fullWidth
+                >
+                    <MenuItem 
+                    onClick={() => {setCreateDialogOpen(true); setNewSessionName("");}} 
+                    sx={{
+                        mb: 0.5,
+                        borderRadius: 1,
+                        backgroundColor: "action.hover",
+                        fontWeight: 600,
+                    }}>
+                        <ListItemIcon>
+                            <AddIcon />
+                        </ListItemIcon>
+                        Create new Session
+                    </MenuItem>
+                    <Divider />
+                    {sessions?.map(session => (
+                        <MenuItem key={session.id} value={session.id}>{session.name}</MenuItem>
+                    ))}
+                </Select>
+            </FormControl>
+            <Button variant="contained" size="small" onClick={onCommit} disabled={!selectedSession}>Restore snapshot</Button>
+            <List>
+                {selectedSession?.snapshots.map((snapshot, index) => {
+                    const isActive = snapshotToPopulate?.datetime === snapshot.datetime;
+                    return (
+                        <ListItemButton
+                            key={index}
+                            selected={isActive}
+                            ref={(el) => {itemRefs.current[snapshot.datetime] = el;}}
+                            onClick={() => handleSnapshotPressed(snapshot)}
+                            sx={{
+                                flexDirection: "column",
+                                alignItems: "flex-start",
+                                "&:hover": {
+                                    backgroundColor: "action.hover",
+                                },
+                                "&.Mui-selected": {
+                                    backgroundColor: "action.selected",
+                                },
+                                "&.Mui-selected:hover": {
+                                    backgroundColor: "action.selected",
+                                },
+                            }}
+                        >
+                            <Box sx={{ fontSize: "0.8em", color: "#666" }}>
+                                {new Date(snapshot.datetime).toLocaleString()}
+                            </Box>
+                        </ListItemButton>
+                    );
+                })}
+            </List>
+        </Stack>
         <Dialog
             open={createDialogOpen}
             onClose={() => setCreateDialogOpen(false)}
