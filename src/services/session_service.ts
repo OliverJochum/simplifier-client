@@ -1,4 +1,11 @@
 import {api} from "../api/server"
+import { diffWords } from "diff";
+
+export type DiffProps = {
+    value: string,
+    added?: boolean,
+    removed?: boolean,
+}
 
 export const sessionService = {
     createSnapshot: async (inputText: string, outputText: string, sessionId: number, ownerId: number) => {
@@ -21,4 +28,8 @@ export const sessionService = {
         const response = await api.get(`/sessions?userId=${ownerId}`);
         return response.data;
     }
+}
+
+export function calculateDiff(oldText: string, newText: string): DiffProps[] {
+    return diffWords(oldText, newText)
 }

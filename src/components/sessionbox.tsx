@@ -1,8 +1,8 @@
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, IconButton, InputLabel, List, ListItemButton, ListItemIcon, MenuItem, Paper, Select, SelectChangeEvent, Stack, TextField } from "@mui/material"
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, List, ListItemButton, ListItemIcon, MenuItem, Paper, Select, SelectChangeEvent, Stack, Switch, TextField } from "@mui/material"
 import { useEffect, useRef, useState } from "react";
 import CloseIcon from "@mui/icons-material/Close";
 import OptionManager from "../services/option_manager";
-import { useOwnerId, useSessions, useShowSessionBox, useSnapshotToPopulate } from "../services/option_manager_hooks";
+import { useOwnerId, useSessions, useShowDiff, useShowSessionBox, useSnapshotToPopulate } from "../services/option_manager_hooks";
 import SessionManager, { SessionProps, SnapshotProps } from "../services/session_manager";
 import { sessionService } from "../services/session_service";
 import AddIcon from "@mui/icons-material/Add";
@@ -23,6 +23,7 @@ function SessionBox(props: SessionBoxProps) {
     const showSessionBox = useShowSessionBox(optionManager!);
     const snapshotToPopulate = useSnapshotToPopulate(sessionManager!);
     const ownerId = useOwnerId(optionManager!);
+    const showDiff = useShowDiff(sessionManager!);
 
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [newSessionName, setNewSessionName] = useState("");
@@ -124,6 +125,7 @@ function SessionBox(props: SessionBoxProps) {
                     ))}
                 </Select>
             </FormControl>
+            <FormControlLabel control={<Switch checked={showDiff} onChange={(e) => sessionManager?.setShowDiff(e.target.checked)} />} label="Show Diff" />
             <Button variant="contained" size="small" onClick={onCommit} disabled={!selectedSession}>Restore snapshot</Button>
             <List>
                 {selectedSession?.snapshots.map((snapshot, index) => {

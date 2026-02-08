@@ -5,8 +5,8 @@ import Grid from "@mui/material/Grid";
 import OptionManager from "../services/option_manager";
 import Scorecard from "./scorecard";
 import { analyzeService } from "../services/analyze_service";
-import { sessionService } from "../services/session_service";
-import { useOwnerId, useSelectedCtxtRetentionScores, useSelectedLegibilityScores, useSelectedSessionId, useSessionModeEnabled, useSnapshotToPopulate } from "../services/option_manager_hooks";
+import { sessionService, calculateDiff, DiffProps} from "../services/session_service";
+import { useOwnerId, useSelectedCtxtRetentionScores, useSelectedLegibilityScores, useSelectedSessionId, useSessionModeEnabled, useShowDiff, useSnapshotToPopulate } from "../services/option_manager_hooks";
 import SessionManager from "../services/session_manager";
 
 type SimplifierProps = {
@@ -30,12 +30,13 @@ const Simplifier = forwardRef<SimplifierHandle, SimplifierProps>((props, ref) =>
 
     const [textInTextAreas, setTextInTextAreas] = useState({ input: "", output: "" });
     const [textCommittedByUser, setTextCommittedByUser] = useState({ input: "", output: "" });
+    const [currentPreview, setCurrentPreview] = useState({ input: "", output: "" });
 
     const [inputScores, setInputScores] = useState<{ [key: string]: number | 0 }>({});
     const [outputScores, setOutputScores] = useState<{ [key: string]: number | 0 }>({});
     const [ctxtRetentionScores, setCtxtRetentionScores] = useState<{ [key: string]: number | 0 }>({});
-    const inputSetterRef = useRef<(val: string, source: SystemIntent) => void>(() => { });
-    const outputSetterRef = useRef<(val: string, source: SystemIntent) => void>(() => { });
+    const inputSetterRef = useRef<(val: string, source: SystemIntent, diff?: DiffProps[]) => void>(() => { });
+    const outputSetterRef = useRef<(val: string, source: SystemIntent, diff?: DiffProps[]) => void>(() => { });
 
     const selectedLegibilityScores = useSelectedLegibilityScores(optionManager!);
     const selectedCtxtRetentionScores = useSelectedCtxtRetentionScores(optionManager!);
@@ -43,13 +44,14 @@ const Simplifier = forwardRef<SimplifierHandle, SimplifierProps>((props, ref) =>
     const ownerId = useOwnerId(optionManager!);
     const sessionModeEnabled = useSessionModeEnabled(optionManager!);
     const snapshotToPopulate = useSnapshotToPopulate(sessionManager!);
+    const showDiff = useShowDiff(sessionManager!);
 
-    const updateOutputSetterRef = (val: string, source: SystemIntent) => {
-        outputSetterRef.current?.(val, source);
+    const updateOutputSetterRef = (val: string, source: SystemIntent, diff?: DiffProps[]) => {
+        outputSetterRef.current?.(val, source, diff);
     }
 
-    const updateInputSetterRef = (val: string, source: SystemIntent) => {
-        inputSetterRef.current?.(val, source);
+    const updateInputSetterRef = (val: string, source: SystemIntent, diff?: DiffProps[]) => {
+        inputSetterRef.current?.(val, source, diff);
     }
 
     const handleTextInInputAreaChange = (value: string, source: SystemIntent) => {
@@ -200,11 +202,23 @@ const Simplifier = forwardRef<SimplifierHandle, SimplifierProps>((props, ref) =>
 
     useEffect(() => {
         if (!sessionModeEnabled || !snapshotToPopulate) return;
-        updateInputSetterRef(snapshotToPopulate.input, "preview");
-        updateOutputSetterRef(snapshotToPopulate.output, "preview");
+
+        setCurrentPreview({ input: snapshotToPopulate.input, output: snapshotToPopulate.output });
+
+        if (showDiff) {
+            const inputdiff = calculateDiff(textCommittedByUser.input, snapshotToPopulate.input);
+            const outputdiff = calculateDiff(textCommittedByUser.output, snapshotToPopulate.output);
+            
+            updateInputSetterRef(snapshotToPopulate.input, "preview", inputdiff);
+            updateOutputSetterRef(snapshotToPopulate.output, "preview", outputdiff);
+        } else {
+            updateInputSetterRef(snapshotToPopulate.input, "preview");
+            updateOutputSetterRef(snapshotToPopulate.output, "preview");
+        }
+
 
         console.log(snapshotToPopulate);
-    }, [sessionModeEnabled, snapshotToPopulate]);
+    }, [sessionModeEnabled, showDiff, snapshotToPopulate, textCommittedByUser.input, textCommittedByUser.output]);
 
     useEffect(() => {
         if (sessionModeEnabled) return;
@@ -213,7 +227,8 @@ const Simplifier = forwardRef<SimplifierHandle, SimplifierProps>((props, ref) =>
             updateOutputSetterRef(textCommittedByUser.output, "commit");
         };
         discardPreviewChanges();
-    }, [sessionModeEnabled, textCommittedByUser.input, textCommittedByUser.output]);
+        sessionManager!.setShowDiff(false);
+    }, [sessionModeEnabled, textCommittedByUser.input, textCommittedByUser.output, sessionManager]);
 
     return (
         <div>
@@ -223,10 +238,11 @@ const Simplifier = forwardRef<SimplifierHandle, SimplifierProps>((props, ref) =>
                         <Scorecard label="Legibility" scores={Object.entries(inputScores).map(([name, value]) => ({ name, value: value || 0 })) || []} />
                         <IOTextBox 
                             textChangeWithinTextareaCallback={handleTextInInputAreaChange} 
-                            setTextFromParent={(setter: (val: string, source: SystemIntent) => void) => {inputSetterRef.current = setter; }} 
+                            setTextFromParent={(setter: (val: string, source: SystemIntent, diff?: DiffProps[]) => void) => {inputSetterRef.current = setter; }} 
                             sentenceAPICallback={simplifyService.callSimplifySentenceSimplify} 
                             model="openai" 
-                            optionManager={optionManager}  
+                            optionManager={optionManager}
+                            sessionManager={sessionManager}
                         />
                     </Grid>
                     <Grid size={6}>
@@ -240,10 +256,11 @@ const Simplifier = forwardRef<SimplifierHandle, SimplifierProps>((props, ref) =>
                         </Grid>
                         <IOTextBox 
                             textChangeWithinTextareaCallback={handleTextInOutputAreaChange} 
-                            setTextFromParent={(setter: (val: string, source: SystemIntent) => void) => { outputSetterRef.current = setter; }} 
+                            setTextFromParent={(setter: (val: string, source: SystemIntent, diff?: DiffProps[]) => void) => { outputSetterRef.current = setter; }} 
                             sentenceAPICallback={simplifyService.callSimplifySentenceSuggest} 
                             model="openai" 
                             optionManager={optionManager} 
+                            sessionManager={sessionManager}
                         />
                     </Grid>
                 </Grid>

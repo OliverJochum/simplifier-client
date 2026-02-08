@@ -18,6 +18,7 @@ class SessionManager {
     private ownerId: number | undefined;
     private sessions: SessionProps[] | undefined;
     private snapshotToPopulate: SnapshotProps | null = null;
+    private showDiff: boolean = false;
 
     private listeners = new Set<Listener>();
 
@@ -78,6 +79,17 @@ class SessionManager {
     
     getSnapshotToPopulate(): SnapshotProps | null {
         return this.snapshotToPopulate;
+    }
+
+    setShowDiff(show: boolean) {
+        if (this.showDiff !== show) {
+            this.showDiff = show;
+            this.notify();
+        }
+    }
+
+    isShowDiff(): boolean {
+        return this.showDiff;
     }
 }
 

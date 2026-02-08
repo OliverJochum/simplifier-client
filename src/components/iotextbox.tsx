@@ -7,8 +7,10 @@ import { IOTextBoxUtils } from '../utils/iotextbox_utils';
 import { MATCH_WORD_REGEX, MATCH_SENTENCE_REGEX } from '../utils/constants';
 import OptionManager from '../services/option_manager';
 import { simplifyService } from '../services/simplify_service';
-import { useSentenceSuggestEnabled, useSynonymModeEnabled } from '../services/option_manager_hooks';
+import { useSentenceSuggestEnabled, useShowDiff, useSynonymModeEnabled } from '../services/option_manager_hooks';
 import { SystemIntent } from './simplifier';
+import { DiffProps } from '../services/session_service';
+import SessionManager from '../services/session_manager';
 
 export type VirtualAnchor = {
     getBoundingClientRect: () => DOMRect;
@@ -16,10 +18,11 @@ export type VirtualAnchor = {
 
 type IOTextBoxProps = {
     textChangeWithinTextareaCallback?: (value: string, source: SystemIntent) => void;
-    setTextFromParent?: (setter: (val: string, source: SystemIntent) => void) => void;
+    setTextFromParent?: (setter: (val: string, source: SystemIntent, diff?: DiffProps[]) => void) => void;
     sentenceAPICallback?: (input: string, selected_service: string) => Promise<any>;
     model?: string;
     optionManager?: OptionManager;
+    sessionManager?: SessionManager;
 }
 
 /**
@@ -31,7 +34,7 @@ type IOTextBoxProps = {
  * @param optionManager OptionManager to get settings from Option vertical bar
  * @return IOTextBox component
  */
-function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, sentenceAPICallback, model, optionManager }: IOTextBoxProps) {
+function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, sentenceAPICallback, model, optionManager, sessionManager }: IOTextBoxProps) {
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
     const overlayRef = useRef<HTMLDivElement>(null);
     const lastSourceRef = useRef<SystemIntent | null>(null);
@@ -39,6 +42,7 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
     const lastNotifiedValueRef = useRef<string | null>(null);
 
     const [text, setText] = useState("");
+    const [diff, setDiff] = useState<DiffProps[] | undefined>(undefined);
 
     const [sentences, setSentences] = useState<string[]>([]);
     const [selectedSentenceIndex, setSelectedSentenceIndex] = useState<number | null>(null);
@@ -52,6 +56,7 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
 
     const isSynonymModeEnabled = useSynonymModeEnabled(optionManager!);
     const isSentenceSuggestEnabled = useSentenceSuggestEnabled(optionManager!);
+    const showDiff = useShowDiff(sessionManager!);
 
     const [cursor, setCursor] = useState({
         start: 0,
@@ -209,10 +214,11 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
     useEffect(() => {
         if (!setTextFromParent) return;
 
-        setTextFromParent((val, source) => {
+        setTextFromParent((val, source, diff) => {
             isParentUpdateRef.current = true;
             lastSourceRef.current = source;
             setText(val);
+            setDiff(diff)
         });
     }, [setTextFromParent]);
 
@@ -300,6 +306,8 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
                 background: "transparent",
                 position: "relative",
                 zIndex: 1,
+                color: showDiff ? "transparent" : undefined,
+                caretColor: showDiff ? "transparent" : undefined,
             }}
             value={text}
             onChange={handleChangeInTextarea}
@@ -308,6 +316,40 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
             onMouseUp={() => { updateCursor(); updateAnchor(); }}
             onScroll={syncScroll}
             />
+            {showDiff && diff && (
+            <Box
+                sx={{
+                    position: "absolute",
+                    inset: 0,
+                    pointerEvents: "none",
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "break-word",
+                    fontFamily: sharedStyles.fontFamily,
+                    fontSize: sharedStyles.fontSize,
+                    lineHeight: sharedStyles.lineHeight,
+                    padding: sharedStyles.padding,
+                    zIndex: 2,
+                }}
+            >
+                {diff.map((part, i) => (
+                    <span
+                        key={i}
+                        style={{
+                            backgroundColor: part.added
+                                ? "#d4f8d4"
+                                : part.removed
+                                ? "#f8d4d4"
+                                : "transparent",
+                            textDecoration: part.removed
+                                ? "line-through"
+                                : "none",
+                        }}
+                    >
+                        {part.value}
+                    </span>
+                ))}
+            </Box>
+            )}
             <style>{`
                 .highlight-word {
                     background-color: rgba(255, 235, 59, 0.4);

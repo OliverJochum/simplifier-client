@@ -72,6 +72,13 @@ function useSnapshotToPopulate(sessionManager: SessionManager) {
     );
 }  
 
+function useShowDiff(sessionManager: SessionManager) {
+    return useSyncExternalStore(
+        sessionManager.subscribe.bind(sessionManager),
+        () => sessionManager.isShowDiff()
+    );
+}
+
 export { 
     useSentenceSuggestEnabled,
     useSynonymModeEnabled, 
@@ -80,5 +87,6 @@ export {
     useSelectedSessionId, 
     useOwnerId, useSessions, 
     useSessionModeEnabled, 
-    useSnapshotToPopulate 
+    useSnapshotToPopulate,
+    useShowDiff
 };
