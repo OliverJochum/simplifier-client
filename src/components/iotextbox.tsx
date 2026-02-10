@@ -427,8 +427,8 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
                 }`}
             </style>
         </Box>
-        <TailoringPopper values={suggestedSentences} hidden={suggestedSentences.length === 0} anchorEl={anchorEl} onValueClick={(value: string) => {replaceSelectedSentence(value);}}/>
-        <TailoringPopper values={suggestedSynonyms} hidden={suggestedSynonyms.length === 0} anchorEl={anchorEl} onValueClick={(value: string) => {replaceSelectedWord(value);}}/>
+        <TailoringPopper values={suggestedSentences} hidden={suggestedSentences.length === 0} anchorEl={anchorEl} onValueClick={(value: string) => {replaceSelectedSentence(value);}} onClose={() => {setAnchorEl(null); setSuggestedSentences([]);}}/>
+        <TailoringPopper values={suggestedSynonyms} hidden={suggestedSynonyms.length === 0} anchorEl={anchorEl} onValueClick={(value: string) => {replaceSelectedWord(value);}} onClose={() => {setAnchorEl(null); setSuggestedSynonyms([]);}}/>
     </>
     );
 }
