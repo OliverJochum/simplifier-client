@@ -64,31 +64,9 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
     });
     const [anchorEl, setAnchorEl] = useState<VirtualAnchor | null>(null);
 
-    // match scroll positions of textarea and overlay
-    function syncScroll() {
-        if (!editableRef.current || !overlayRef.current) return;
+    // effects 
 
-        overlayRef.current.scrollTop = editableRef.current.scrollTop;
-        overlayRef.current.scrollLeft = editableRef.current.scrollLeft;
-    }
-
-    function updateCursor() {
-        const sel = window.getSelection();
-        const root = editableRef.current;
-        if (!sel || !root || sel.rangeCount === 0) return;
-
-        const range = sel.getRangeAt(0);
-
-        const preRange = range.cloneRange();
-        preRange.selectNodeContents(root);
-        preRange.setEnd(range.startContainer, range.startOffset);
-
-        const start = preRange.toString().length;
-        const end = start + range.toString().length;
-
-        setCursor({ start, end });
-    }
-
+    // when cursor changes, update selected sentence and word ranges
     useEffect(() => {
         const range = sentenceRanges.find(
             r => cursor.start >= r.start && cursor.start <= r.end
@@ -105,6 +83,47 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
         setSentenceRanges(getSentenceRanges(text));
     }, [text]);
 
+    // allow parent to set text 
+    useEffect(() => {
+        if (!setTextFromParent) return;
+
+        setTextFromParent((val, source, diff) => {
+            isParentUpdateRef.current = true;
+            lastSourceRef.current = source;
+            setText(val);
+            setDiff(diff)
+        });
+    }, [setTextFromParent]);
+
+
+    // when text changes, notify parent via callback
+    useEffect(() => {
+        if (!textChangeWithinTextareaCallback) return;
+        if (!lastSourceRef.current) return;
+        if (text === lastNotifiedValueRef.current) return;
+
+        lastNotifiedValueRef.current = text;
+        textChangeWithinTextareaCallback(text, lastSourceRef.current);
+
+        isParentUpdateRef.current = false;
+    }, [text, textChangeWithinTextareaCallback]);
+
+    // when text changes, update innerText of editable div
+    useEffect(() => {
+        const el = editableRef.current; 
+        if (!el) return;
+
+        if (el.innerText !== text) {
+            isProgrammaticUpdateRef.current = true;
+            el.innerText = text;
+
+            requestAnimationFrame(() => {
+            isProgrammaticUpdateRef.current = false;
+            });
+        }
+    }, [text]);
+
+    // api calls
     // if sentence suggestion enabled, call sentence suggestion API
     useEffect(() => {
         if (!isSentenceSuggestEnabled || !sentenceAPICallback || !selectedSentenceRange || model === undefined) {
@@ -141,26 +160,12 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
         fetchSynonyms();
     }, [text,selectedWordRange,selectedSentenceRange,model,isSynonymModeEnabled,]);
 
-    function updateAnchor() {
-        const sel = window.getSelection();
-        if (!sel || sel.rangeCount === 0) return;
-
-        const rect = sel.getRangeAt(0).getBoundingClientRect();
-
-        setAnchorEl({
-            getBoundingClientRect: () =>
-            new DOMRect(rect.left, rect.bottom, 0, 0),
-        });
-    }
-
+    // replacement utils
     function replaceSelectedSentence(newSentence: string) {
         if (!selectedSentenceRange) return;
 
         const { start, end } = selectedSentenceRange;
-        const newText =
-            text.slice(0, start) +
-            newSentence +
-            text.slice(end);
+        const newText = text.slice(0, start) + newSentence + text.slice(end);
         const newCursorPos = start + newSentence.length;
 
         setText(newText);
@@ -181,10 +186,7 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
 
         const { start, end } = selectedWordRange;
 
-        const newText =
-            text.slice(0, start) +
-            newWord +
-            text.slice(end);
+        const newText = text.slice(0, start) + newWord + text.slice(end);
 
         const newCursorPos = start + newWord.length;
 
@@ -200,18 +202,47 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
         });
     }
 
-    // allow parent to set text 
-    useEffect(() => {
-        if (!setTextFromParent) return;
+    // div event handlers
 
-        setTextFromParent((val, source, diff) => {
-            isParentUpdateRef.current = true;
-            lastSourceRef.current = source;
-            setText(val);
-            setDiff(diff)
+    // match scroll positions of textarea and overlay
+    function syncScroll() {
+        if (!editableRef.current || !overlayRef.current) return;
+
+        overlayRef.current.scrollTop = editableRef.current.scrollTop;
+        overlayRef.current.scrollLeft = editableRef.current.scrollLeft;
+    }
+
+    function updateCursor() {
+        const sel = window.getSelection();
+        const root = editableRef.current;
+        if (!sel || !root || sel.rangeCount === 0) return;
+
+        const range = sel.getRangeAt(0);
+
+        const preRange = range.cloneRange();
+        preRange.selectNodeContents(root);
+        preRange.setEnd(range.startContainer, range.startOffset);
+
+        const start = preRange.toString().length;
+        const end = start + range.toString().length;
+
+        setCursor({ start, end });
+    }
+
+    // updates anchor position for popper based on caret position
+    function updateAnchor() {
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return;
+
+        const rect = sel.getRangeAt(0).getBoundingClientRect();
+
+        setAnchorEl({
+            getBoundingClientRect: () =>
+            new DOMRect(rect.left, rect.bottom, 0, 0),
         });
-    }, [setTextFromParent]);
+    }
 
+    // handle input in contenteditable div
     function handleEditableInput() {
         if (isProgrammaticUpdateRef.current) return;
 
@@ -226,32 +257,6 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
         setText(val);
         textChangeWithinTextareaCallback?.(val, "commit");
     }
-
-    // when text changes, notify parent via callback
-    useEffect(() => {
-        if (!textChangeWithinTextareaCallback) return;
-        if (!lastSourceRef.current) return;
-        if (text === lastNotifiedValueRef.current) return;
-
-        lastNotifiedValueRef.current = text;
-        textChangeWithinTextareaCallback(text, lastSourceRef.current);
-
-        isParentUpdateRef.current = false;
-    }, [text, textChangeWithinTextareaCallback]);
-
-    useEffect(() => {
-        const el = editableRef.current;
-        if (!el) return;
-
-        if (el.innerText !== text) {
-            isProgrammaticUpdateRef.current = true;
-            el.innerText = text;
-
-            requestAnimationFrame(() => {
-            isProgrammaticUpdateRef.current = false;
-            });
-        }
-    }, [text]);
 
     // necessary to normalize text before inserting it to prevent issues such as inserting escaped html
     function handlePaste(e: React.ClipboardEvent<HTMLDivElement>) {
@@ -272,11 +277,10 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
         if (!sel || !sel.rangeCount) return;
 
         const range = sel.getRangeAt(0);
-        range.deleteContents(); // remove selection
+        range.deleteContents(); 
         const textNode = document.createTextNode(text);
         range.insertNode(textNode);
 
-        // move caret to end of inserted text
         range.setStartAfter(textNode);
         range.collapse(true);
         sel.removeAllRanges();
@@ -295,7 +299,6 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
         fontVariantLigatures: "normal",
         fontFeatureSettings: "normal",
     };
-
 
     return (
         <>
