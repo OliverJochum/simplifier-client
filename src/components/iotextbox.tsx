@@ -1,8 +1,6 @@
 import Box from '@mui/material/Box';
-import TextareaAutosize from '@mui/material/TextareaAutosize';
 import { useEffect, useRef, useState } from 'react';
 import { TailoringPopper } from './tailoringpopper';
-import getCaretCoordinates from 'textarea-caret';
 import OptionManager from '../services/option_manager';
 import { simplifyService } from '../services/simplify_service';
 import { useSentenceSuggestEnabled, useShowDiff, useSynonymModeEnabled } from '../services/option_manager_hooks';
@@ -13,6 +11,7 @@ import { type Range, getSentenceRanges } from '../utils/sentenceRanges';
 import { highlightRange } from '../utils/highlightRange';
 import { getWordRange } from '../utils/wordRanges';
 import { CSSProperties } from '@mui/material';
+import { setCaretAt } from '../utils/caret_utils';
 
 export type VirtualAnchor = {
     getBoundingClientRect: () => DOMRect;
@@ -37,10 +36,11 @@ type IOTextBoxProps = {
  * @return IOTextBox component
  */
 function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, sentenceAPICallback, model, optionManager, sessionManager }: IOTextBoxProps) {
-    const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+    const editableRef = useRef<HTMLDivElement | null>(null);
     const overlayRef = useRef<HTMLDivElement>(null);
     const lastSourceRef = useRef<SystemIntent | null>(null);
     const isParentUpdateRef = useRef(false);
+    const isProgrammaticUpdateRef = useRef(false);
     const lastNotifiedValueRef = useRef<string | null>(null);
 
     const [text, setText] = useState("");
@@ -65,20 +65,28 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
     const [anchorEl, setAnchorEl] = useState<VirtualAnchor | null>(null);
 
     // match scroll positions of textarea and overlay
-    const syncScroll = () => {
-        if (!textareaRef.current || !overlayRef.current) return;
+    function syncScroll() {
+        if (!editableRef.current || !overlayRef.current) return;
 
-        overlayRef.current.scrollTop = textareaRef.current.scrollTop;
-        overlayRef.current.scrollLeft = textareaRef.current.scrollLeft;
-    };
+        overlayRef.current.scrollTop = editableRef.current.scrollTop;
+        overlayRef.current.scrollLeft = editableRef.current.scrollLeft;
+    }
 
-    const updateCursor = () => {
-        const textarea = textareaRef.current;
-        if (!textarea) return;
-        setCursor({
-            start: textarea.selectionStart,
-            end: textarea.selectionEnd,
-        });
+    function updateCursor() {
+        const sel = window.getSelection();
+        const root = editableRef.current;
+        if (!sel || !root || sel.rangeCount === 0) return;
+
+        const range = sel.getRangeAt(0);
+
+        const preRange = range.cloneRange();
+        preRange.selectNodeContents(root);
+        preRange.setEnd(range.startContainer, range.startOffset);
+
+        const start = preRange.toString().length;
+        const end = start + range.toString().length;
+
+        setCursor({ start, end });
     }
 
     useEffect(() => {
@@ -134,25 +142,14 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
     }, [text,selectedWordRange,selectedSentenceRange,model,isSynonymModeEnabled,]);
 
     function updateAnchor() {
-        const textarea = textareaRef.current;
-        if (!textarea) return;
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return;
 
-        const caret = textarea.selectionEnd;
-        if (caret == null) return;
-
-        const coords = getCaretCoordinates(textarea, caret);
+        const rect = sel.getRangeAt(0).getBoundingClientRect();
 
         setAnchorEl({
             getBoundingClientRect: () =>
-                new DOMRect(
-                    coords.left + textarea.getBoundingClientRect().left + window.scrollX,
-                    coords.top +
-                        textarea.getBoundingClientRect().top +
-                        coords.height +
-                        window.scrollY,
-                    0,
-                    0
-                ),
+            new DOMRect(rect.left, rect.bottom, 0, 0),
         });
     }
 
@@ -173,7 +170,9 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
         setSuggestedSentences([]);
 
         requestAnimationFrame(() => {
-            textareaRef.current?.setSelectionRange(newCursorPos, newCursorPos);
+            if (editableRef.current) {
+            setCaretAt(editableRef.current, newCursorPos);
+            }
         });
     }
 
@@ -195,8 +194,10 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
         setSuggestedSynonyms([]);
 
         requestAnimationFrame(() => {
-            textareaRef.current?.setSelectionRange(newCursorPos, newCursorPos);
-        }); 
+            if (editableRef.current) {
+            setCaretAt(editableRef.current, newCursorPos);
+            }
+        });
     }
 
     // allow parent to set text 
@@ -211,16 +212,20 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
         });
     }, [setTextFromParent]);
 
-    // onchange shouldn't fire if value is changed programmatically
-    const handleChangeInTextarea = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const val = e.target.value;
+    function handleEditableInput() {
+        if (isProgrammaticUpdateRef.current) return;
+
+        const el = editableRef.current;
+        if (!el) return;
+
+        const val = el.innerText.replace(/\u00A0/g, " ");
 
         isParentUpdateRef.current = false;
         lastSourceRef.current = "commit";
 
         setText(val);
         textChangeWithinTextareaCallback?.(val, "commit");
-    };
+    }
 
     // when text changes, notify parent via callback
     useEffect(() => {
@@ -233,6 +238,50 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
 
         isParentUpdateRef.current = false;
     }, [text, textChangeWithinTextareaCallback]);
+
+    useEffect(() => {
+        const el = editableRef.current;
+        if (!el) return;
+
+        if (el.innerText !== text) {
+            isProgrammaticUpdateRef.current = true;
+            el.innerText = text;
+
+            requestAnimationFrame(() => {
+            isProgrammaticUpdateRef.current = false;
+            });
+        }
+    }, [text]);
+
+    // necessary to normalize text before inserting it to prevent issues such as inserting escaped html
+    function handlePaste(e: React.ClipboardEvent<HTMLDivElement>) {
+        e.preventDefault(); 
+
+        const clipboardText = e.clipboardData.getData("text/plain");
+        const el = editableRef.current;
+        if (!el) return;
+
+        insertTextAtCursor(el, clipboardText);
+
+        const newText = el.innerText;
+        setText(newText);
+    }
+
+    function insertTextAtCursor(el: HTMLDivElement, text: string) {
+        const sel = window.getSelection();
+        if (!sel || !sel.rangeCount) return;
+
+        const range = sel.getRangeAt(0);
+        range.deleteContents(); // remove selection
+        const textNode = document.createTextNode(text);
+        range.insertNode(textNode);
+
+        // move caret to end of inserted text
+        range.setStartAfter(textNode);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+    }
 
     const sharedStyles: CSSProperties = {
         padding: "8px",
@@ -250,109 +299,120 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
 
     return (
         <>
-            <Box position="relative" width="400px">
-            {/* Highlight layer */}
-            <Box
-                component="div"
-                sx={{
+            <Box position="relative" width="400px" sx={{ border: "1px solid #ccc", borderRadius: 4 }}>
+                <Box
+                    component="div"
+                    sx={{
                     ...sharedStyles,
-                    width: "calc(100% - 1px)",
+                    width: "100%",
                     position: "absolute",
-                    overflow: "hidden",
                     top: 0,
                     left: 0,
+                    overflow: "hidden",
+                    pointerEvents: "none",
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "anywhere",
+                    wordBreak: "normal",
+                    hyphens: "none",
                     // debugging
                     // color: "rgba(0,0,0,0.2)",
                     // background: "rgba(255,0,0,0.05)",
                     color: "transparent",
-                    pointerEvents: "none",
-                    whiteSpace: "pre-wrap",
-                    overflowWrap: "anywhere",
-                    wordBreak: "normal",
-                    hyphens: "none",
-                }}
-                dangerouslySetInnerHTML={{
+                    background: "transparent",         
+                    zIndex: 0,
+                    }}
+                    dangerouslySetInnerHTML={{
                     __html: highlightRange(text, selectedSentenceRange, "highlight-sentence"),
-                }}
-            />
-            <Box
-                component="div"
-                sx={{
+                    }}
+                />
+                <Box
+                    component="div"
+                    sx={{
                     ...sharedStyles,
-                    width: "calc(100% - 1px)",
+                    width: "100%",
                     position: "absolute",
-                    overflow: "hidden",
                     top: 0,
                     left: 0,
-                    color: "transparent",
+                    overflow: "hidden",
                     pointerEvents: "none",
                     whiteSpace: "pre-wrap",
                     overflowWrap: "anywhere",
                     wordBreak: "normal",
                     hyphens: "none",
-                }}
-                dangerouslySetInnerHTML={{
+                    // debugging
+                    // color: "rgba(0,0,0,0.2)",
+                    // background: "rgba(255,0,0,0.05)",
+                    color: "transparent",
+                    background: "transparent",
+                    zIndex: 1,
+                    }}
+                    dangerouslySetInnerHTML={{
                     __html: highlightRange(text, selectedWordRange, "highlight-word"),
-                }}
-            />
-            {/* Textarea layer */}
-            <TextareaAutosize
-            ref={textareaRef}
-            minRows={20}
-            maxRows={40}
-            spellCheck={false}     // 🔑 prevents hidden wrapping changes
-            autoCorrect="off"
-            autoCapitalize="off"
-            style={{
-                ...sharedStyles,
-                width: "100%",
-                overflowY: "scroll",
-                resize: "none",
-                background: "transparent",
-                position: "relative",
-                zIndex: 1,
-                color: showDiff ? "transparent" : undefined,
-                caretColor: showDiff ? "transparent" : undefined,
-            }}
-            value={text}
-            onChange={handleChangeInTextarea}
-            onSelect={updateCursor}
-            onKeyUp={() => { updateCursor(); updateAnchor(); }}
-            onMouseUp={() => { updateCursor(); updateAnchor(); }}
-            onScroll={syncScroll}
-            />
-            {showDiff && diff && (
-            <Box
-                sx={{
-                    position: "absolute",
-                    inset: 0,
-                    pointerEvents: "none",
+                    }}
+                />
+                <Box
+                    component="div"
+                    ref={editableRef}
+                    contentEditable
+                    suppressContentEditableWarning
+                    spellCheck={false}
+                    style={{
+                    ...sharedStyles,
+                    width: "100%",
+                    minHeight: "20lh",
+                    maxHeight: "40lh",
+                    overflowY: "auto",
+                    resize: "none",
+                    background: "transparent",          // no white box
+                    position: "relative",
+                    zIndex: 2,                          // above overlays
+                    outline: "none",
+                    // color: "transparent",
+                    color: showDiff ? "transparent" : "black",
+                    caretColor: showDiff ? "transparent" : "black",
                     whiteSpace: "pre-wrap",
-                    overflowWrap: "break-word",
-                    fontFamily: sharedStyles.fontFamily,
-                    fontSize: sharedStyles.fontSize,
-                    lineHeight: sharedStyles.lineHeight,
-                    padding: sharedStyles.padding,
-                    zIndex: 2,
-                }}
-            >
-                {diff.map((part, i) => (
-                    <span
-                        key={i}
-                        style={{
-                            backgroundColor: part.added
-                                ? "#d4f8d4"
-                                : part.removed
-                                ? "#f8d4d4"
-                                : "transparent",
-                            textDecoration: part.removed
-                                ? "line-through"
-                                : "none",
-                        }}
-                    >
-                        {part.value}
-                    </span>
-                ))}
+                    overflowWrap: "anywhere",
+                    wordBreak: "normal",
+                    hyphens: "none",
+                    }}
+                    onInput={handleEditableInput}
+                    onPaste={handlePaste}
+                    onKeyUp={() => { updateCursor(); updateAnchor(); }}
+                    onMouseUp={() => { updateCursor(); updateAnchor(); }}
+                    onScroll={syncScroll}
+                />
+                {showDiff && diff && (
+                <Box
+                    sx={{
+                        position: "absolute",
+                        inset: 0,
+                        pointerEvents: "none",
+                        whiteSpace: "pre-wrap",
+                        overflowWrap: "break-word",
+                        fontFamily: sharedStyles.fontFamily,
+                        fontSize: sharedStyles.fontSize,
+                        lineHeight: sharedStyles.lineHeight,
+                        padding: sharedStyles.padding,
+                        zIndex: 2,
+                    }}
+                >
+                    {diff.map((part, i) => (
+                        <span
+                            key={i}
+                            style={{
+                                backgroundColor: part.added
+                                    ? "#d4f8d4"
+                                    : part.removed
+                                    ? "#f8d4d4"
+                                    : "transparent",
+                                textDecoration: part.removed
+                                    ? "line-through"
+                                    : "none",
+                            }}
+                        >
+                            {part.value}
+                        </span>
+                    ))}
             </Box>
             )}
             <style>{`
