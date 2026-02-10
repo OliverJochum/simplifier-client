@@ -1,16 +1,18 @@
 import Box from '@mui/material/Box';
 import TextareaAutosize from '@mui/material/TextareaAutosize';
-import { use, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TailoringPopper } from './tailoringpopper';
 import getCaretCoordinates from 'textarea-caret';
-import { IOTextBoxUtils } from '../utils/iotextbox_utils';
-import { MATCH_WORD_REGEX, MATCH_SENTENCE_REGEX } from '../utils/constants';
 import OptionManager from '../services/option_manager';
 import { simplifyService } from '../services/simplify_service';
 import { useSentenceSuggestEnabled, useShowDiff, useSynonymModeEnabled } from '../services/option_manager_hooks';
 import { SystemIntent } from './simplifier';
 import { DiffProps } from '../services/session_service';
 import SessionManager from '../services/session_manager';
+import { type Range, getSentenceRanges } from '../utils/sentenceRanges';
+import { highlightRange } from '../utils/highlightRange';
+import { getWordRange } from '../utils/wordRanges';
+import { CSSProperties } from '@mui/material';
 
 export type VirtualAnchor = {
     getBoundingClientRect: () => DOMRect;
@@ -44,14 +46,12 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
     const [text, setText] = useState("");
     const [diff, setDiff] = useState<DiffProps[] | undefined>(undefined);
 
-    const [sentences, setSentences] = useState<string[]>([]);
-    const [selectedSentenceIndex, setSelectedSentenceIndex] = useState<number | null>(null);
-    const [highlightedSentence, setHighlightedSentence] = useState("");
+
+    const [sentenceRanges, setSentenceRanges] = useState<Range[]>([]);
+    const [selectedSentenceRange, setSelectedSentenceRange] = useState<{ start: number; end: number } | null>(null);
     const [suggestedSentences, setSuggestedSentences] = useState<string[]>([]);
 
-    const [words, setWords] = useState<string[]>([]);
-    const [selectedWordIndex, setSelectedWordIndex] = useState<number | null>(null);
-    const [highlightedWord, setHighlightedWord] = useState("");
+    const [selectedWordRange, setSelectedWordRange] = useState<Range | null>(null);
     const [suggestedSynonyms, setSuggestedSynonyms] = useState<string[]>([]);
 
     const isSynonymModeEnabled = useSynonymModeEnabled(optionManager!);
@@ -81,76 +81,57 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
         });
     }
 
-    // on cursor position change
     useEffect(() => {
-        // select word by getting index from cursor position
-        // Slice text between beginning and where text cursor is, split text into array by spaces, get length of array - 1
-        // Since word is last element in sliced array, pos in total text is length - 1
-        setSelectedWordIndex(text.slice(0, cursor.start).split(/\s+/).length - 1);
+        const range = sentenceRanges.find(
+            r => cursor.start >= r.start && cursor.start <= r.end
+        ) || null;
 
-        // select sentence
-        // same logic, except split by sentence ending punctuation
-        setSelectedSentenceIndex(text.slice(0, cursor.start).split(/[.!?]/g).length - 1);
+        setSelectedSentenceRange(range);
 
-    }, [cursor.start, cursor.end, cursor, text]);
+        const wordRange = getWordRange(text, cursor.start);
+        setSelectedWordRange(wordRange);
+    }, [cursor.start, sentenceRanges, text]);
 
+    // on text change, update sentence ranges
     useEffect(() => {
-        setHighlightedWord(IOTextBoxUtils.highlightWord(text, selectedWordIndex));
-    }, [selectedWordIndex, text, words]);
-
-    // on selected sentence change - same logic as word highlighting, different regex
-    useEffect(() => {
-        setHighlightedSentence(IOTextBoxUtils.highlightSentence(text, selectedSentenceIndex));
-    }, [selectedSentenceIndex, sentences, text]);
+        setSentenceRanges(getSentenceRanges(text));
+    }, [text]);
 
     // if sentence suggestion enabled, call sentence suggestion API
     useEffect(() => {
-        if (isSentenceSuggestEnabled && sentenceAPICallback && selectedSentenceIndex !== null && model !== undefined) {
-            const sentence = sentences[selectedSentenceIndex];
-            if (sentence) {
-                sentenceAPICallback(sentence, model).then(res => {
-                    setSuggestedSentences(JSON.parse(res.replace(/'/g, '"')));
-                }).catch(err => {
-                    console.error("Error fetching sentence suggestions:", err);
-                });
-            }
+        if (!isSentenceSuggestEnabled || !sentenceAPICallback || !selectedSentenceRange || model === undefined) {
+            return;
         }
-    }, [sentenceAPICallback, selectedSentenceIndex, sentences, model, isSentenceSuggestEnabled]);
+        const sentence = text.slice(selectedSentenceRange.start,selectedSentenceRange.end);
+
+        if (!sentence.trim()) return;
+
+        sentenceAPICallback(sentence, model).then(res => {
+            setSuggestedSentences(JSON.parse(res.replace(/'/g, '"')));
+        }).catch(err => {
+            console.error("Error fetching sentence suggestions:", err);
+        });
+    }, [text,selectedSentenceRange,sentenceAPICallback,model,isSentenceSuggestEnabled,]);
 
     // if synonym mode enabled, call synonym API
     useEffect( () => {
         async function fetchSynonyms() {
-            if (isSynonymModeEnabled && selectedWordIndex !== null && selectedSentenceIndex !== null && model !== undefined) {
-                const word = words[selectedWordIndex];
-                const sentence = sentences[selectedSentenceIndex]
+            if (!isSynonymModeEnabled || !selectedWordRange || !selectedSentenceRange || model === undefined) return;
+            
+            const word = text.slice(selectedWordRange.start,selectedWordRange.end);
+            const sentence = text.slice(selectedSentenceRange.start,selectedSentenceRange.end);
+            if (!word || !sentence) return;
 
-                if (word && sentence) {
-                    try {
-                        const data: { response: [string, number][] } = await simplifyService.callSimplifySynonyms(word, sentence);
-                        const parsed = data.response.map(([word, _score]) => word);
-                        setSuggestedSynonyms(parsed);
-                    } catch (err) {
-                    console.error("Error fetching synonyms:", err);
-                    }   
-                }
-            }
+            try {
+                const data: { response: [string, number][] } = await simplifyService.callSimplifySynonyms(word, sentence);
+                const parsed = data.response.map(([word, _score]) => word);
+                setSuggestedSynonyms(parsed);
+            } catch (err) {
+            console.error("Error fetching synonyms:", err);
+            }   
         }
         fetchSynonyms();
-    }, [selectedWordIndex, selectedSentenceIndex, words, sentences, model, isSynonymModeEnabled]);
-    
-    // on text change, update words and sentences, and notify parent
-    useEffect(() => {
-        setWords(text.match(MATCH_WORD_REGEX) || []);
-        setSentences(text.match(MATCH_SENTENCE_REGEX) || []);
-    }, [text]);
-
-    // debugging crap
-    // useEffect(() => {
-    //     console.log("Words updated:", words);
-    //     console.log("Sentences updated:", sentences);
-    //     console.log("Selected word:", words[selectedWordIndex ?? -1]);
-    //     console.log("Selected sentence:", sentences[selectedSentenceIndex ?? -1]);
-    // }, [selectedSentenceIndex, selectedWordIndex, sentences, words]);
+    }, [text,selectedWordRange,selectedSentenceRange,model,isSynonymModeEnabled,]);
 
     function updateAnchor() {
         const textarea = textareaRef.current;
@@ -176,38 +157,46 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
     }
 
     function replaceSelectedSentence(newSentence: string) {
-        if (selectedSentenceIndex === null) return;
+        if (!selectedSentenceRange) return;
 
-        sentences[selectedSentenceIndex] = newSentence;
-        const newText = IOTextBoxUtils.joinSentences(sentences);
+        const { start, end } = selectedSentenceRange;
+        const newText =
+            text.slice(0, start) +
+            newSentence +
+            text.slice(end);
+        const newCursorPos = start + newSentence.length;
+
         setText(newText);
 
-        setSelectedWordIndex(text.slice(0, cursor.start).split(/\s+/).length - 1);
-        setSelectedSentenceIndex(text.slice(0, cursor.start).split(/[.!?]/g).length - 1);
-        IOTextBoxUtils.highlightWord(newText, selectedWordIndex);
-        IOTextBoxUtils.highlightSentence(newText, selectedSentenceIndex);
-
+        setSelectedSentenceRange(null);
+        setSelectedWordRange(null);
         setSuggestedSentences([]);
-        setSelectedSentenceIndex(null);
+
+        requestAnimationFrame(() => {
+            textareaRef.current?.setSelectionRange(newCursorPos, newCursorPos);
+        });
     }
 
     function replaceSelectedWord(newWord: string) {
-        if (selectedWordIndex === null || selectedSentenceIndex === null) return;
-        
-        const newSentence = sentences[selectedSentenceIndex].replace(words[selectedWordIndex], newWord);
-        const newSentences = [...sentences];
-        newSentences[selectedSentenceIndex] = newSentence;
-        const newText = IOTextBoxUtils.joinSentences(newSentences);
+        if (!selectedWordRange) return;
+
+        const { start, end } = selectedWordRange;
+
+        const newText =
+            text.slice(0, start) +
+            newWord +
+            text.slice(end);
+
+        const newCursorPos = start + newWord.length;
+
         setText(newText);
 
-        // words[selectedWordIndex] = newWord;
-        // const newText = words.join(" "); // probably causing issues with spacing/punctuation, could replace word in sentence instead and build new text from sentences
-        // setText(newText);
-
-        setSelectedWordIndex(text.slice(0, cursor.start).split(/\s+/).length - 1);
-        IOTextBoxUtils.highlightWord(newText, selectedWordIndex);
+        setSelectedWordRange(null);
         setSuggestedSynonyms([]);
-        setSelectedWordIndex(null); 
+
+        requestAnimationFrame(() => {
+            textareaRef.current?.setSelectionRange(newCursorPos, newCursorPos);
+        }); 
     }
 
     // allow parent to set text 
@@ -245,14 +234,17 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
         isParentUpdateRef.current = false;
     }, [text, textChangeWithinTextareaCallback]);
 
-    const sharedStyles = {
-        width: "100%",
+    const sharedStyles: CSSProperties = {
         padding: "8px",
-        lineHeight: 1.5,
+        lineHeight: "1.5",
         fontFamily: "inherit",
         fontSize: "inherit",
         letterSpacing: "inherit",
         whiteSpace: "pre-wrap",
+        boxSizing: "border-box",
+        fontKerning: "auto",
+        fontVariantLigatures: "normal",
+        fontFeatureSettings: "normal",
     };
 
 
@@ -264,45 +256,58 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
                 component="div"
                 sx={{
                     ...sharedStyles,
+                    width: "calc(100% - 1px)",
+                    position: "absolute",
+                    overflow: "hidden",
+                    top: 0,
+                    left: 0,
                     // debugging
                     // color: "rgba(0,0,0,0.2)",
                     // background: "rgba(255,0,0,0.05)",
-                    overflowWrap: "break-word",
-                    boxSizing: "border-box",
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
                     color: "transparent",
                     pointerEvents: "none",
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "anywhere",
+                    wordBreak: "normal",
+                    hyphens: "none",
                 }}
-                dangerouslySetInnerHTML={{ __html: highlightedSentence }}
+                dangerouslySetInnerHTML={{
+                    __html: highlightRange(text, selectedSentenceRange, "highlight-sentence"),
+                }}
             />
             <Box
                 component="div"
                 sx={{
                     ...sharedStyles,
-                    // debugging
-                    // color: "rgba(0,0,0,0.2)",
-                    // background: "rgba(255,0,0,0.05)",
-                    overflowWrap: "break-word",
-                    boxSizing: "border-box",
+                    width: "calc(100% - 1px)",
                     position: "absolute",
+                    overflow: "hidden",
                     top: 0,
                     left: 0,
                     color: "transparent",
                     pointerEvents: "none",
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "anywhere",
+                    wordBreak: "normal",
+                    hyphens: "none",
                 }}
-                dangerouslySetInnerHTML={{ __html: highlightedWord }}
+                dangerouslySetInnerHTML={{
+                    __html: highlightRange(text, selectedWordRange, "highlight-word"),
+                }}
             />
             {/* Textarea layer */}
             <TextareaAutosize
             ref={textareaRef}
             minRows={20}
             maxRows={40}
+            spellCheck={false}     // 🔑 prevents hidden wrapping changes
+            autoCorrect="off"
+            autoCapitalize="off"
             style={{
                 ...sharedStyles,
-                boxSizing: "border-box",
-                overflowWrap: "break-word",
+                width: "100%",
+                overflowY: "scroll",
+                resize: "none",
                 background: "transparent",
                 position: "relative",
                 zIndex: 1,
