@@ -138,7 +138,7 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
         }).catch(err => {
             console.error("Error fetching sentence suggestions:", err);
         });
-    }, [text,selectedSentenceRange,sentenceAPICallback,model,isSentenceSuggestEnabled,]);
+    }, [text,selectedSentenceRange,sentenceAPICallback,model,isSentenceSuggestEnabled,cursor.start]);
 
     // if synonym mode enabled, call synonym API
     useEffect( () => {
@@ -158,7 +158,7 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
             }   
         }
         fetchSynonyms();
-    }, [text,selectedWordRange,selectedSentenceRange,model,isSynonymModeEnabled,]);
+    }, [text,selectedWordRange,selectedSentenceRange,model,isSynonymModeEnabled,cursor.start]);
 
     // replacement utils
     function replaceSelectedSentence(newSentence: string) {
