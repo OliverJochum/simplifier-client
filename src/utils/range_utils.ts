@@ -29,6 +29,18 @@ function getSentenceRanges(text: string): Range[] {
     return ranges;
 }
 
+function getWordRanges(text: string): Range[] {
+    const wordRegex = /\b\w+\b/g;
+    const ranges: Range[] = [];
+    let match;
+
+    while ((match = wordRegex.exec(text)) !== null) {
+        ranges.push({ text: match[0], start: match.index, end: match.index + match[0].length });
+    }
+
+    return ranges;
+}
+
 /**
  * Util function to get the start and end character indices of the word at a given cursor position in a text.
  * @param text 
@@ -102,22 +114,22 @@ function escapeHtml(str: string) {
 }
 
 /**
- * Finds the ranges of sentences from a list of sentences within a given set of sentence ranges.
- * @param sentenceRanges all ranges of a text
- * @param sentenceList List of sentences for which to get the ranges
+ * Finds the ranges of targets (sentences or words) given a list of those targets within a given set of target ranges.
+ * @param allRanges all ranges of a text
+ * @param targetList List of targets(words or sentences) for which to get the ranges
  * @returns 
  */
-function findSentenceRangesFromSentenceList(
-    sentenceRanges: Range[],
-    sentenceList: string[]
+function findRangesFromTargetList(
+    allRanges: Range[],
+    targetList: string[]
 ) {
-    const selectedRanges = new Set(sentenceList.map(s => s.trim()));
+    const selectedRanges = new Set(targetList.map(s => s.trim()));
 
-    return sentenceRanges.filter(range =>
+    return allRanges.filter(range =>
         selectedRanges.has(range.text.trim())
     );
 }
 
 
 
-export { type Range, getSentenceRanges, getWordRangeFromCursorPos, highlightRanges, findSentenceRangesFromSentenceList };
+export { type Range, getSentenceRanges, getWordRangeFromCursorPos, highlightRanges, findRangesFromTargetList, getWordRanges };

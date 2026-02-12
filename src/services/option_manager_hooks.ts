@@ -86,6 +86,13 @@ function useComplexSentencesEnabled(optionManager: OptionManager) {
     );
 }
 
+function useComplexWordsEnabled(optionManager: OptionManager) {
+    return useSyncExternalStore(
+        optionManager.subscribe.bind(optionManager),
+        () => optionManager.isComplexWordsEnabled()
+    );
+}
+
 export { 
     useSentenceSuggestEnabled,
     useSynonymModeEnabled, 
@@ -97,4 +104,5 @@ export {
     useSnapshotToPopulate,
     useShowDiff,
     useComplexSentencesEnabled,
+    useComplexWordsEnabled
 };

@@ -3,11 +3,11 @@ import { useEffect, useRef, useState } from 'react';
 import { TailoringPopper } from './tailoringpopper';
 import OptionManager from '../services/option_manager';
 import { simplifyService } from '../services/simplify_service';
-import { useComplexSentencesEnabled, useSentenceSuggestEnabled, useShowDiff, useSynonymModeEnabled } from '../services/option_manager_hooks';
+import { useComplexSentencesEnabled, useComplexWordsEnabled, useSentenceSuggestEnabled, useShowDiff, useSynonymModeEnabled } from '../services/option_manager_hooks';
 import { SystemIntent } from './simplifier';
 import { DiffProps } from '../services/session_service';
 import SessionManager from '../services/session_manager';
-import { type Range, getSentenceRanges, highlightRanges, getWordRangeFromCursorPos, findSentenceRangesFromSentenceList  } from '../utils/range_utils';
+import { type Range, getSentenceRanges, highlightRanges, getWordRangeFromCursorPos, findRangesFromTargetList, getWordRanges  } from '../utils/range_utils';
 import { CSSProperties } from '@mui/material';
 import { setCaretAt } from '../utils/caret_utils';
 import { analyzeService } from '../services/analyze_service';
@@ -54,10 +54,13 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
 
     const [selectedWordRange, setSelectedWordRange] = useState<Range | null>(null);
     const [suggestedSynonyms, setSuggestedSynonyms] = useState<string[]>([]);
+    const [complexWords, setComplexWords] = useState<string[]>([]);
+    const [complexWordRanges, setComplexWordRanges] = useState<Range[]>([]);
 
     const isSynonymModeEnabled = useSynonymModeEnabled(optionManager!);
     const isSentenceSuggestEnabled = useSentenceSuggestEnabled(optionManager!);
     const isComplexSentencesEnabled = useComplexSentencesEnabled(optionManager!);
+    const isComplexWordsEnabled = useComplexWordsEnabled(optionManager!);
     const showDiff = useShowDiff(sessionManager!);
 
     const [cursor, setCursor] = useState({
@@ -127,6 +130,29 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
 
     useEffect(() => {
         if (!text) return;
+        if (!isComplexWordsEnabled) {
+            setComplexWords([]);
+            setComplexWordRanges([]);
+            return;
+        };
+
+        analyzeService.callGetRareWords(text).then((response) => {
+            const wordArray = Object.keys(response);
+            setComplexWords(wordArray);
+        }).catch((err) => {
+            console.error("Error fetching complex words:", err);
+        });
+    }, [isComplexWordsEnabled, text]);
+
+    useEffect(() => {
+        if (!complexWords || complexWords.length === 0) return;
+        if (!text || text.length === 0) return;
+
+        setComplexWordRanges(findRangesFromTargetList(getWordRanges(text), complexWords));
+    }, [complexWords, text]);
+
+    useEffect(() => {
+        if (!text) return;
         if (!isComplexSentencesEnabled) {
             setComplexSentences([]);
             setComplexSentenceRanges([]);
@@ -145,7 +171,7 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
         if (!complexSentences || complexSentences.length === 0) return;
         if (!sentenceRanges || sentenceRanges.length === 0) return;
         console.log(complexSentences)
-        setComplexSentenceRanges(findSentenceRangesFromSentenceList(sentenceRanges, complexSentences));
+        setComplexSentenceRanges(findRangesFromTargetList(sentenceRanges, complexSentences));
     }, [complexSentences, sentenceRanges]);
 
     // api calls
@@ -320,6 +346,31 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
     return (
         <>
             <Box position="relative" width="400px" sx={{ border: "1px solid #ccc", borderRadius: 4 }} overflow="auto">
+                <Box
+                    component="div"
+                    sx={{
+                    ...sharedStyles,
+                    width: "100%",
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    overflow: "hidden",
+                    pointerEvents: "none",
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "anywhere",
+                    wordBreak: "normal",
+                    hyphens: "none",
+                    // debugging
+                    // color: "rgba(0,0,0,0.2)",
+                    // background: "rgba(255,0,0,0.05)",
+                    color: "transparent",
+                    background: "transparent",         
+                    zIndex: 0,
+                    }}
+                    dangerouslySetInnerHTML={{
+                    __html: highlightRanges(text, complexWordRanges, "underline-sentence"),
+                    }}
+                />
                 <Box
                     component="div"
                     sx={{
