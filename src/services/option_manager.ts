@@ -7,6 +7,7 @@ type OptionManagerProps = {
     selectedSessionId?: number;
     ownerId?: number;
     sessionModeEnabled?: boolean;
+    complexSentencesEnabled?: boolean;
 };
 
 type Listener = () => void;
@@ -20,6 +21,7 @@ class OptionManager {
     private selectedSessionId: number | undefined;
     private ownerId: number | undefined;
     private sessionModeEnabled = false;
+    private complexSentencesEnabled = false;
 
     private listeners = new Set<Listener>();
 
@@ -43,6 +45,7 @@ class OptionManager {
         selectedSessionId,
         ownerId,
         sessionModeEnabled,
+        complexSentencesEnabled,
     }: OptionManagerProps) {
         if (sentenceSuggestEnabled !== undefined) this.sentenceSuggestEnabled = sentenceSuggestEnabled;
         if (synonymModeEnabled !== undefined) this.synonymModeEnabled = synonymModeEnabled;
@@ -52,6 +55,7 @@ class OptionManager {
         if (selectedSessionId !== undefined) this.selectedSessionId = selectedSessionId;
         if (ownerId !== undefined) this.ownerId = ownerId;
         if (sessionModeEnabled !== undefined) this.sessionModeEnabled = sessionModeEnabled;
+        if (complexSentencesEnabled !== undefined) this.complexSentencesEnabled = complexSentencesEnabled;
     }
 
     setSentenceSuggestEnabled(enabled: boolean) {
@@ -140,6 +144,17 @@ class OptionManager {
     
     isSessionModeEnabled(): boolean {
         return this.sessionModeEnabled;
+    }
+
+    setComplexSentencesEnabled(enabled: boolean) {
+        if (this.complexSentencesEnabled !== enabled) {
+            this.complexSentencesEnabled = enabled;
+            this.notify();
+        }
+    }
+    
+    isComplexSentencesEnabled(): boolean {
+        return this.complexSentencesEnabled;
     }
 }
 

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { TailoringPopper } from './tailoringpopper';
 import OptionManager from '../services/option_manager';
 import { simplifyService } from '../services/simplify_service';
-import { useSentenceSuggestEnabled, useShowDiff, useSynonymModeEnabled } from '../services/option_manager_hooks';
+import { useComplexSentencesEnabled, useSentenceSuggestEnabled, useShowDiff, useSynonymModeEnabled } from '../services/option_manager_hooks';
 import { SystemIntent } from './simplifier';
 import { DiffProps } from '../services/session_service';
 import SessionManager from '../services/session_manager';
@@ -57,6 +57,7 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
 
     const isSynonymModeEnabled = useSynonymModeEnabled(optionManager!);
     const isSentenceSuggestEnabled = useSentenceSuggestEnabled(optionManager!);
+    const isComplexSentencesEnabled = useComplexSentencesEnabled(optionManager!);
     const showDiff = useShowDiff(sessionManager!);
 
     const [cursor, setCursor] = useState({
@@ -122,6 +123,15 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
             isProgrammaticUpdateRef.current = false;
             });
         }
+    }, [text]);
+
+    useEffect(() => {
+        if (!text) return;
+        if (!isComplexSentencesEnabled) {
+            setComplexSentences([]);
+            setComplexSentenceRanges([]);
+            return;
+        };
 
         analyzeService.callGetComplexSentences(text).then((response) => {
             const sentenceArray = Object.keys(response);
@@ -129,8 +139,7 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
         }).catch((err) => {
             console.error("Error fetching complex sentences:", err);
         });
-
-    }, [text]);
+    }, [isComplexSentencesEnabled, text]);
 
     useEffect(() => {
         if (!complexSentences || complexSentences.length === 0) return;

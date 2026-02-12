@@ -6,7 +6,7 @@ import FormLabel from '@mui/material/FormLabel';
 import Switch from '@mui/material/Switch';
 import { useEffect, useState } from 'react';
 import OptionManager from '../services/option_manager';
-import { useSentenceSuggestEnabled, useSynonymModeEnabled } from '../services/option_manager_hooks';
+import { useComplexSentencesEnabled, useSentenceSuggestEnabled, useSynonymModeEnabled } from '../services/option_manager_hooks';
 
 type OptionVBarProps = {
     optionManager?: OptionManager;
@@ -20,13 +20,14 @@ type OptionVBarProps = {
 function OptionVBar ({ optionManager }: OptionVBarProps) {
     const synonymModeEnabled = useSynonymModeEnabled(optionManager!);
     const sentenceSuggestEnabled = useSentenceSuggestEnabled(optionManager!);
+    const complexSentencesEnabled = useComplexSentencesEnabled(optionManager!);
     
     return (
         <Box component="section" sx={{ border: '1px solid black', borderRadius: 1, width: 200, bgcolor: 'background.paper', padding: 1 }}>
             <FormGroup>
                 <FormLabel component="legend">Analysis</FormLabel>
                 <FormControlLabel control={<Switch />} label="Complex words" labelPlacement="start" />
-                <FormControlLabel control={<Switch />} label="Complex sentences" labelPlacement="start" />
+                <FormControlLabel control={<Switch checked={complexSentencesEnabled} onChange={(e) => optionManager?.setComplexSentencesEnabled(e.target.checked)} />} label="Complex sentences" labelPlacement="start" />
                 <Button variant="outlined">Scores</Button>
             </FormGroup>
             <FormGroup>

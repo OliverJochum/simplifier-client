@@ -79,6 +79,13 @@ function useShowDiff(sessionManager: SessionManager) {
     );
 }
 
+function useComplexSentencesEnabled(optionManager: OptionManager) {
+    return useSyncExternalStore(
+        optionManager.subscribe.bind(optionManager),
+        () => optionManager.isComplexSentencesEnabled()
+    );
+}
+
 export { 
     useSentenceSuggestEnabled,
     useSynonymModeEnabled, 
@@ -88,5 +95,6 @@ export {
     useOwnerId, useSessions, 
     useSessionModeEnabled, 
     useSnapshotToPopulate,
-    useShowDiff
+    useShowDiff,
+    useComplexSentencesEnabled,
 };
