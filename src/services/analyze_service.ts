@@ -8,5 +8,13 @@ export const analyzeService = {
     callGetCtxtRetentionScore: async (score: string, candidate_text: string, reference_text: string) => {
         const response = await api.get(`/analyze/context_retention/${score}`, {params: { candidateText: candidate_text, referenceText: reference_text }})
         return response.data;
+    },
+    callGetRareWords: async (text: string) => {
+        const response = await api.get(`/analyze/rare_words`, {params: { text: text }})
+        return response.data;
+    },
+    callGetComplexSentences: async (text: string) => {
+        const response = await api.get(`/analyze/complex_sentences`, {params: { text: text, threshold: 30 }})
+        return response.data;
     }
 }

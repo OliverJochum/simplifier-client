@@ -7,11 +7,10 @@ import { useSentenceSuggestEnabled, useShowDiff, useSynonymModeEnabled } from '.
 import { SystemIntent } from './simplifier';
 import { DiffProps } from '../services/session_service';
 import SessionManager from '../services/session_manager';
-import { type Range, getSentenceRanges } from '../utils/sentenceRanges';
-import { highlightRange } from '../utils/highlightRange';
-import { getWordRange } from '../utils/wordRanges';
+import { type Range, getSentenceRanges, highlightRanges, getWordRangeFromCursorPos, findSentenceRangesFromSentenceList  } from '../utils/range_utils';
 import { CSSProperties } from '@mui/material';
 import { setCaretAt } from '../utils/caret_utils';
+import { analyzeService } from '../services/analyze_service';
 
 export type VirtualAnchor = {
     getBoundingClientRect: () => DOMRect;
@@ -48,7 +47,9 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
 
 
     const [sentenceRanges, setSentenceRanges] = useState<Range[]>([]);
-    const [selectedSentenceRange, setSelectedSentenceRange] = useState<{ start: number; end: number } | null>(null);
+    const [complexSentences, setComplexSentences] = useState<string[]>([]);
+    const [complexSentenceRanges, setComplexSentenceRanges] = useState<Range[]>([]);
+    const [selectedSentenceRange, setSelectedSentenceRange] = useState< Range | null>(null);
     const [suggestedSentences, setSuggestedSentences] = useState<string[]>([]);
 
     const [selectedWordRange, setSelectedWordRange] = useState<Range | null>(null);
@@ -74,7 +75,7 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
 
         setSelectedSentenceRange(range);
 
-        const wordRange = getWordRange(text, cursor.start);
+        const wordRange = getWordRangeFromCursorPos(text, cursor.start);
         setSelectedWordRange(wordRange);
     }, [cursor.start, sentenceRanges, text]);
 
@@ -121,7 +122,22 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
             isProgrammaticUpdateRef.current = false;
             });
         }
+
+        analyzeService.callGetComplexSentences(text).then((response) => {
+            const sentenceArray = Object.keys(response);
+            setComplexSentences(sentenceArray);
+        }).catch((err) => {
+            console.error("Error fetching complex sentences:", err);
+        });
+
     }, [text]);
+
+    useEffect(() => {
+        if (!complexSentences || complexSentences.length === 0) return;
+        if (!sentenceRanges || sentenceRanges.length === 0) return;
+        console.log(complexSentences)
+        setComplexSentenceRanges(findSentenceRangesFromSentenceList(sentenceRanges, complexSentences));
+    }, [complexSentences, sentenceRanges]);
 
     // api calls
     // if sentence suggestion enabled, call sentence suggestion API
@@ -325,7 +341,32 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
                     zIndex: 0,
                     }}
                     dangerouslySetInnerHTML={{
-                    __html: highlightRange(text, selectedSentenceRange, "highlight-sentence"),
+                    __html: highlightRanges(text, complexSentenceRanges, "underline-sentence"),
+                    }}
+                />
+                <Box
+                    component="div"
+                    sx={{
+                    ...sharedStyles,
+                    width: "100%",
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    overflow: "hidden",
+                    pointerEvents: "none",
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "anywhere",
+                    wordBreak: "normal",
+                    hyphens: "none",
+                    // debugging
+                    // color: "rgba(0,0,0,0.2)",
+                    // background: "rgba(255,0,0,0.05)",
+                    color: "transparent",
+                    background: "transparent",         
+                    zIndex: 0,
+                    }}
+                    dangerouslySetInnerHTML={{
+                    __html: highlightRanges(text, selectedSentenceRange ? [selectedSentenceRange] : null, "highlight-sentence"),
                     }}
                 />
                 <Box
@@ -350,7 +391,7 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
                     zIndex: 1,
                     }}
                     dangerouslySetInnerHTML={{
-                    __html: highlightRange(text, selectedWordRange, "highlight-word"),
+                    __html: highlightRanges(text, selectedWordRange ? [selectedWordRange] : null, "highlight-word"),
                     }}
                 />
                 <Box
@@ -424,7 +465,14 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
                 }
                 .highlight-sentence {
                     background-color: rgba(255, 193, 7, 0.4);
-                }`}
+                }
+                .underline-sentence {
+                    text-decoration-line: underline;
+                    text-decoration-color: red;
+                    text-decoration-thickness: 2px;
+                    text-underline-offset: 2px;
+                }
+                `}
             </style>
         </Box>
         <TailoringPopper values={suggestedSentences} hidden={suggestedSentences.length === 0} anchorEl={anchorEl} onValueClick={(value: string) => {replaceSelectedSentence(value);}} onClose={() => {setAnchorEl(null); setSuggestedSentences([]);}}/>
