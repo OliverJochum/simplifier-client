@@ -36,7 +36,7 @@ type IOTextBoxProps = {
  */
 function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, sentenceAPICallback, model, optionManager, sessionManager }: IOTextBoxProps) {
     const editableRef = useRef<HTMLDivElement | null>(null);
-    const overlayRef = useRef<HTMLDivElement>(null);
+
     const lastSourceRef = useRef<SystemIntent | null>(null);
     const isParentUpdateRef = useRef(false);
     const isProgrammaticUpdateRef = useRef(false);
@@ -220,14 +220,6 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
 
     // div event handlers
 
-    // match scroll positions of textarea and overlay
-    function syncScroll() {
-        if (!editableRef.current || !overlayRef.current) return;
-
-        overlayRef.current.scrollTop = editableRef.current.scrollTop;
-        overlayRef.current.scrollLeft = editableRef.current.scrollLeft;
-    }
-
     function updateCursor() {
         const sel = window.getSelection();
         const root = editableRef.current;
@@ -318,7 +310,7 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
 
     return (
         <>
-            <Box position="relative" width="400px" sx={{ border: "1px solid #ccc", borderRadius: 4 }}>
+            <Box position="relative" width="400px" sx={{ border: "1px solid #ccc", borderRadius: 4 }} overflow="auto">
                 <Box
                     component="div"
                     sx={{
@@ -405,7 +397,6 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
                     width: "100%",
                     minHeight: "20lh",
                     maxHeight: "40lh",
-                    overflowY: "auto",
                     resize: "none",
                     background: "transparent",          // no white box
                     position: "relative",
@@ -419,11 +410,11 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
                     wordBreak: "normal",
                     hyphens: "none",
                     }}
+                    overflow="hidden"
                     onInput={handleEditableInput}
                     onPaste={handlePaste}
                     onKeyUp={() => { updateCursor(); updateAnchor(); }}
                     onMouseUp={() => { updateCursor(); updateAnchor(); }}
-                    onScroll={syncScroll}
                 />
                 {showDiff && diff && (
                 <Box
