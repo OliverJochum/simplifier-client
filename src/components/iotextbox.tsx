@@ -11,6 +11,7 @@ import { type Range, getSentenceRanges, highlightRanges, getWordRangeFromCursorP
 import { CSSProperties } from '@mui/material';
 import { setCaretAt } from '../utils/caret_utils';
 import { analyzeService } from '../services/analyze_service';
+import OverlayBox from './overlaybox';
 
 export type VirtualAnchor = {
     getBoundingClientRect: () => DOMRect;
@@ -346,106 +347,10 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
     return (
         <>
             <Box position="relative" width="400px" sx={{ border: "1px solid #ccc", borderRadius: 4 }} overflow="auto">
-                <Box
-                    component="div"
-                    sx={{
-                    ...sharedStyles,
-                    width: "100%",
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    overflow: "hidden",
-                    pointerEvents: "none",
-                    whiteSpace: "pre-wrap",
-                    overflowWrap: "anywhere",
-                    wordBreak: "normal",
-                    hyphens: "none",
-                    // debugging
-                    // color: "rgba(0,0,0,0.2)",
-                    // background: "rgba(255,0,0,0.05)",
-                    color: "transparent",
-                    background: "transparent",         
-                    zIndex: 0,
-                    }}
-                    dangerouslySetInnerHTML={{
-                    __html: highlightRanges(text, complexWordRanges, "underline-sentence"),
-                    }}
-                />
-                <Box
-                    component="div"
-                    sx={{
-                    ...sharedStyles,
-                    width: "100%",
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    overflow: "hidden",
-                    pointerEvents: "none",
-                    whiteSpace: "pre-wrap",
-                    overflowWrap: "anywhere",
-                    wordBreak: "normal",
-                    hyphens: "none",
-                    // debugging
-                    // color: "rgba(0,0,0,0.2)",
-                    // background: "rgba(255,0,0,0.05)",
-                    color: "transparent",
-                    background: "transparent",         
-                    zIndex: 0,
-                    }}
-                    dangerouslySetInnerHTML={{
-                    __html: highlightRanges(text, complexSentenceRanges, "underline-sentence"),
-                    }}
-                />
-                <Box
-                    component="div"
-                    sx={{
-                    ...sharedStyles,
-                    width: "100%",
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    overflow: "hidden",
-                    pointerEvents: "none",
-                    whiteSpace: "pre-wrap",
-                    overflowWrap: "anywhere",
-                    wordBreak: "normal",
-                    hyphens: "none",
-                    // debugging
-                    // color: "rgba(0,0,0,0.2)",
-                    // background: "rgba(255,0,0,0.05)",
-                    color: "transparent",
-                    background: "transparent",         
-                    zIndex: 0,
-                    }}
-                    dangerouslySetInnerHTML={{
-                    __html: highlightRanges(text, selectedSentenceRange ? [selectedSentenceRange] : null, "highlight-sentence"),
-                    }}
-                />
-                <Box
-                    component="div"
-                    sx={{
-                    ...sharedStyles,
-                    width: "100%",
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    overflow: "hidden",
-                    pointerEvents: "none",
-                    whiteSpace: "pre-wrap",
-                    overflowWrap: "anywhere",
-                    wordBreak: "normal",
-                    hyphens: "none",
-                    // debugging
-                    // color: "rgba(0,0,0,0.2)",
-                    // background: "rgba(255,0,0,0.05)",
-                    color: "transparent",
-                    background: "transparent",
-                    zIndex: 1,
-                    }}
-                    dangerouslySetInnerHTML={{
-                    __html: highlightRanges(text, selectedWordRange ? [selectedWordRange] : null, "highlight-word"),
-                    }}
-                />
+                <OverlayBox sharedStyles={sharedStyles} dangerouslySetInnerHTML={{__html: highlightRanges(text, complexWordRanges, "underline-sentence")}}/>
+                <OverlayBox sharedStyles={sharedStyles} dangerouslySetInnerHTML={{__html: highlightRanges(text, complexSentenceRanges, "underline-sentence")}}/>
+                <OverlayBox sharedStyles={sharedStyles} dangerouslySetInnerHTML={{__html: highlightRanges(text, selectedSentenceRange ? [selectedSentenceRange] : null, "highlight-sentence")}}/>
+                <OverlayBox sharedStyles={sharedStyles} dangerouslySetInnerHTML={{__html: highlightRanges(text, selectedWordRange ? [selectedWordRange] : null, "highlight-word"),}}/>
                 <Box
                     component="div"
                     ref={editableRef}
