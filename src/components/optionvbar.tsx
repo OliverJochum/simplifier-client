@@ -4,7 +4,6 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import FormGroup from '@mui/material/FormGroup';
 import FormLabel from '@mui/material/FormLabel';
 import Switch from '@mui/material/Switch';
-import { useEffect, useState } from 'react';
 import OptionManager from '../services/option_manager';
 import { useComplexSentencesEnabled, useComplexWordsEnabled, useSentenceSuggestEnabled, useSynonymModeEnabled } from '../services/option_manager_hooks';
 

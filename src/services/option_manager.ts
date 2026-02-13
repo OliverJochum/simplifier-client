@@ -9,6 +9,7 @@ type OptionManagerProps = {
     sessionModeEnabled?: boolean;
     complexSentencesEnabled?: boolean;
     complexWordsEnabled?: boolean;
+    selectedModel?: string;
 };
 
 type Listener = () => void;
@@ -24,6 +25,7 @@ class OptionManager {
     private sessionModeEnabled = false;
     private complexSentencesEnabled = false;
     private complexWordsEnabled = false;
+    private selectedModel: string | undefined;
 
     private listeners = new Set<Listener>();
 
@@ -48,7 +50,8 @@ class OptionManager {
         ownerId,
         sessionModeEnabled,
         complexSentencesEnabled,
-        complexWordsEnabled
+        complexWordsEnabled,
+        selectedModel,
     }: OptionManagerProps) {
         if (sentenceSuggestEnabled !== undefined) this.sentenceSuggestEnabled = sentenceSuggestEnabled;
         if (synonymModeEnabled !== undefined) this.synonymModeEnabled = synonymModeEnabled;
@@ -60,6 +63,7 @@ class OptionManager {
         if (sessionModeEnabled !== undefined) this.sessionModeEnabled = sessionModeEnabled;
         if (complexSentencesEnabled !== undefined) this.complexSentencesEnabled = complexSentencesEnabled;
         if (complexWordsEnabled !== undefined) this.complexWordsEnabled = complexWordsEnabled;
+        if (selectedModel !== undefined) this.selectedModel = selectedModel;
     }
 
     setSentenceSuggestEnabled(enabled: boolean) {
@@ -170,6 +174,17 @@ class OptionManager {
     
     isComplexWordsEnabled(): boolean {
         return this.complexWordsEnabled;
+    }
+
+    setSelectedModel(model: string | undefined) {
+        if (this.selectedModel !== model) {
+            this.selectedModel = model;
+            this.notify();
+        }
+    }
+
+    getSelectedModel(): string | undefined {
+        return this.selectedModel;
     }
 }
 

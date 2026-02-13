@@ -6,7 +6,7 @@ import OptionManager from "../services/option_manager";
 import Scorecard from "./scorecard";
 import { analyzeService } from "../services/analyze_service";
 import { sessionService, calculateDiff, DiffProps} from "../services/session_service";
-import { useOwnerId, useSelectedCtxtRetentionScores, useSelectedLegibilityScores, useSelectedSessionId, useSessionModeEnabled, useShowDiff, useSnapshotToPopulate } from "../services/option_manager_hooks";
+import { useOwnerId, useSelectedCtxtRetentionScores, useSelectedLegibilityScores, useSelectedModel, useSelectedSessionId, useSessionModeEnabled, useShowDiff, useSnapshotToPopulate } from "../services/option_manager_hooks";
 import SessionManager from "../services/session_manager";
 
 type SimplifierProps = {
@@ -45,6 +45,7 @@ const Simplifier = forwardRef<SimplifierHandle, SimplifierProps>((props, ref) =>
     const sessionModeEnabled = useSessionModeEnabled(optionManager!);
     const snapshotToPopulate = useSnapshotToPopulate(sessionManager!);
     const showDiff = useShowDiff(sessionManager!);
+    const selectedModel = useSelectedModel(optionManager!);
 
     const updateOutputSetterRef = (val: string, source: SystemIntent, diff?: DiffProps[]) => {
         outputSetterRef.current?.(val, source, diff);
@@ -93,7 +94,7 @@ const Simplifier = forwardRef<SimplifierHandle, SimplifierProps>((props, ref) =>
     }));
 
     const handleSimplify = () => {
-        simplifyService.callSimplifyGenTxt(textInTextAreas.input, "openai").then(res => updateOutputSetterRef(res, "commit")).catch(err => {
+        simplifyService.callSimplifyGenTxt(textInTextAreas.input, selectedModel!).then(res => updateOutputSetterRef(res, "commit")).catch(err => {
             console.error("Error simplifying text:", err);
         });
     };
@@ -240,7 +241,7 @@ const Simplifier = forwardRef<SimplifierHandle, SimplifierProps>((props, ref) =>
                             textChangeWithinTextareaCallback={handleTextInInputAreaChange} 
                             setTextFromParent={(setter: (val: string, source: SystemIntent, diff?: DiffProps[]) => void) => {inputSetterRef.current = setter; }} 
                             sentenceAPICallback={simplifyService.callSimplifySentenceSimplify} 
-                            model="openai" 
+                            model={selectedModel!} 
                             optionManager={optionManager}
                             sessionManager={sessionManager}
                         />
@@ -258,7 +259,7 @@ const Simplifier = forwardRef<SimplifierHandle, SimplifierProps>((props, ref) =>
                             textChangeWithinTextareaCallback={handleTextInOutputAreaChange} 
                             setTextFromParent={(setter: (val: string, source: SystemIntent, diff?: DiffProps[]) => void) => { outputSetterRef.current = setter; }} 
                             sentenceAPICallback={simplifyService.callSimplifySentenceSuggest} 
-                            model="openai" 
+                            model={selectedModel!} 
                             optionManager={optionManager} 
                             sessionManager={sessionManager}
                         />

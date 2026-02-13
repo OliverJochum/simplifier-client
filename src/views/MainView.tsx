@@ -20,6 +20,7 @@ function MainView() {
             selectedSessionId: 1,
             ownerId: 1,
             sessionModeEnabled: false,
+            selectedModel: "openai"
     });
 
     const sessionManager = new SessionManager(optionManager.getOwnerId());

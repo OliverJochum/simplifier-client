@@ -93,6 +93,13 @@ function useComplexWordsEnabled(optionManager: OptionManager) {
     );
 }
 
+function useSelectedModel(optionManager: OptionManager) {
+    return useSyncExternalStore(
+        optionManager.subscribe.bind(optionManager),
+        () => optionManager.getSelectedModel()
+    );
+}
+
 export { 
     useSentenceSuggestEnabled,
     useSynonymModeEnabled, 
@@ -104,5 +111,6 @@ export {
     useSnapshotToPopulate,
     useShowDiff,
     useComplexSentencesEnabled,
-    useComplexWordsEnabled
+    useComplexWordsEnabled,
+    useSelectedModel
 };
