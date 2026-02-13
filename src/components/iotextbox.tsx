@@ -121,7 +121,8 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
 
         if (el.innerText !== text) {
             isProgrammaticUpdateRef.current = true;
-            el.innerText = text;
+            el.innerHTML = "";
+            el.appendChild(document.createTextNode(text)); // to prevent html injection
 
             requestAnimationFrame(() => {
             isProgrammaticUpdateRef.current = false;
@@ -346,9 +347,9 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
 
     return (
         <>
-            <Box position="relative" width="400px" sx={{ border: "1px solid #ccc", borderRadius: 4 }} overflow="auto">
+            <Box position="relative" width="600px" sx={{ border: "1px solid #ccc", borderRadius: 4 }} overflow="hidden">
                 <OverlayBox sharedStyles={sharedStyles} dangerouslySetInnerHTML={{__html: highlightRanges(text, complexWordRanges, "underline-sentence")}}/>
-                <OverlayBox sharedStyles={sharedStyles} dangerouslySetInnerHTML={{__html: highlightRanges(text, complexSentenceRanges, "underline-sentence")}}/>
+                <OverlayBox sharedStyles={sharedStyles} dangerouslySetInnerHTML={{__html: highlightRanges(text, complexSentenceRanges, "underline-sentence")}}/> 
                 <OverlayBox sharedStyles={sharedStyles} dangerouslySetInnerHTML={{__html: highlightRanges(text, selectedSentenceRange ? [selectedSentenceRange] : null, "highlight-sentence")}}/>
                 <OverlayBox sharedStyles={sharedStyles} dangerouslySetInnerHTML={{__html: highlightRanges(text, selectedWordRange ? [selectedWordRange] : null, "highlight-word"),}}/>
                 <Box
@@ -361,7 +362,7 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
                     ...sharedStyles,
                     width: "100%",
                     minHeight: "20lh",
-                    maxHeight: "40lh",
+                    // maxHeight: "40lh",
                     resize: "none",
                     background: "transparent",          // no white box
                     position: "relative",
