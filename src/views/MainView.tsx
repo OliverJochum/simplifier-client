@@ -6,6 +6,7 @@ import OptionManager from '../services/option_manager';
 import SessionBox from '../components/sessionbox';
 import SessionManager from '../services/session_manager';
 import { useRef } from 'react';
+import { useOwnerId } from '../services/option_manager_hooks';
 
 
 
@@ -17,19 +18,30 @@ function MainView() {
             showSessionBox: false,
             selectedLegibilityScores: ['fre', 'wstf'],
             selectedCtxtRetentionScores: ['bertscore'],
-            selectedSessionId: 1,
+            selectedSessionId: undefined,
             ownerId: 1,
             sessionModeEnabled: false,
             selectedModel: "openai"
     });
+    const ownerId = useOwnerId(optionManager);
 
-    const sessionManager = new SessionManager(optionManager.getOwnerId());
+    const sessionManager = new SessionManager(ownerId);
 
     const simplifierRef = useRef<SimplifierHandle>(null);
 
     const handleCommitSnapshot = () => {
         simplifierRef.current?.commitPreviewChanges();
     };
+
+    const callSessionsForUser = async (userId: number) => {
+        await sessionManager?.initializeForUser(userId);
+    }
+
+    const handleSessionBoxClose = async () => {
+        optionManager.setShowSessionBox(false);
+        optionManager.setSessionModeEnabled(false);
+        await callSessionsForUser(ownerId!);
+    }
 
 
     return (
@@ -40,7 +52,7 @@ function MainView() {
                 </Grid>
                 <Grid size={3}>
                     <OptionVBar optionManager={optionManager} />
-                    <SessionBox optionManager={optionManager} sessionManager={sessionManager} onClose={() => {optionManager.setShowSessionBox(false); optionManager.setSessionModeEnabled(false)}} onCommit={handleCommitSnapshot}/>
+                    <SessionBox optionManager={optionManager} sessionManager={sessionManager} onClose={handleSessionBoxClose} onCommit={handleCommitSnapshot}/>
                 </Grid>
             </Grid>
         </Box>

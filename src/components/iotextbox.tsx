@@ -8,7 +8,7 @@ import { SystemIntent } from './simplifier';
 import { DiffProps } from '../services/session_service';
 import SessionManager from '../services/session_manager';
 import { type Range, getSentenceRanges, highlightRanges, getWordRangeFromCursorPos, findRangesFromTargetList, getWordRanges  } from '../utils/range_utils';
-import { CSSProperties } from '@mui/material';
+import { CircularProgress, CSSProperties } from '@mui/material';
 import { setCaretAt } from '../utils/caret_utils';
 import { analyzeService } from '../services/analyze_service';
 import OverlayBox from './overlaybox';
@@ -24,6 +24,7 @@ type IOTextBoxProps = {
     model?: string;
     optionManager?: OptionManager;
     sessionManager?: SessionManager;
+    loading?: boolean;
 }
 
 /**
@@ -35,7 +36,7 @@ type IOTextBoxProps = {
  * @param optionManager OptionManager to get settings from Option vertical bar
  * @return IOTextBox component
  */
-function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, sentenceAPICallback, model, optionManager, sessionManager }: IOTextBoxProps) {
+function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, sentenceAPICallback, model, optionManager, sessionManager, loading }: IOTextBoxProps) {
     const editableRef = useRef<HTMLDivElement | null>(null);
 
     const lastSourceRef = useRef<SystemIntent | null>(null);
@@ -46,6 +47,8 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
     const [text, setText] = useState("");
     const [diff, setDiff] = useState<DiffProps[] | undefined>(undefined);
 
+    const [isSentencesLoading, setIsSentencesLoading] = useState(false);
+    const [isSynonymsLoading, setIsSynonymsLoading] = useState(false);
 
     const [sentenceRanges, setSentenceRanges] = useState<Range[]>([]);
     const [complexSentences, setComplexSentences] = useState<string[]>([]);
@@ -68,9 +71,17 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
         start: 0,
         end: 0,
     });
+
     const [anchorEl, setAnchorEl] = useState<VirtualAnchor | null>(null);
+    const virtualAnchorRef = useRef<VirtualAnchor | null>(null);
 
     // effects 
+
+    useEffect(() => {
+        virtualAnchorRef.current = {
+            getBoundingClientRect: () => new DOMRect(),
+        };
+    }, []);
 
     // when cursor changes, update selected sentence and word ranges
     useEffect(() => {
@@ -184,12 +195,18 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
         }
         const sentence = text.slice(selectedSentenceRange.start,selectedSentenceRange.end);
 
+        console.log(isSentenceSuggestEnabled);
+
         if (!sentence.trim()) return;
+
+        setIsSentencesLoading(true);
 
         sentenceAPICallback(sentence, model).then(res => {
             setSuggestedSentences(JSON.parse(res.replace(/'/g, '"')));
         }).catch(err => {
             console.error("Error fetching sentence suggestions:", err);
+        }).finally(() => {
+            setIsSentencesLoading(false);
         });
     }, [text,selectedSentenceRange,sentenceAPICallback,model,isSentenceSuggestEnabled,cursor.start]);
 
@@ -202,13 +219,17 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
             const sentence = text.slice(selectedSentenceRange.start,selectedSentenceRange.end);
             if (!word || !sentence) return;
 
+            setIsSynonymsLoading(true);
+
             try {
                 const data: { response: [string, number][] } = await simplifyService.callSimplifySynonyms(word, sentence);
                 const parsed = data.response.map(([word, _score]) => word);
                 setSuggestedSynonyms(parsed);
             } catch (err) {
             console.error("Error fetching synonyms:", err);
-            }   
+            } finally {
+                setIsSynonymsLoading(false);
+            }
         }
         fetchSynonyms();
     }, [text,selectedWordRange,selectedSentenceRange,model,isSynonymModeEnabled,cursor.start]);
@@ -229,9 +250,10 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
 
         requestAnimationFrame(() => {
             if (editableRef.current) {
-            setCaretAt(editableRef.current, newCursorPos);
+                setCaretAt(editableRef.current, newCursorPos);
             }
         });
+        setAnchorEl(null);
     }
 
     function replaceSelectedWord(newWord: string) {
@@ -253,6 +275,7 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
             setCaretAt(editableRef.current, newCursorPos);
             }
         });
+        setAnchorEl(null);
     }
 
     // div event handlers
@@ -280,11 +303,16 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
         if (!sel || sel.rangeCount === 0) return;
 
         const rect = sel.getRangeAt(0).getBoundingClientRect();
+        if (!rect) return;
 
-        setAnchorEl({
-            getBoundingClientRect: () =>
-            new DOMRect(rect.left, rect.bottom, 0, 0),
-        });
+        if (!virtualAnchorRef.current) return;
+
+        virtualAnchorRef.current.getBoundingClientRect = () =>
+            new DOMRect(rect.left, rect.bottom, 0, 0);
+
+        if (anchorEl !== virtualAnchorRef.current) {
+            setAnchorEl(virtualAnchorRef.current);
+        }
     }
 
     // handle input in contenteditable div
@@ -331,6 +359,17 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
         sel.removeAllRanges();
         sel.addRange(range);
     }
+
+    useEffect(() => {
+        if (!isSentenceSuggestEnabled) return;
+        if (!selectedSentenceRange) return;
+
+        updateAnchor();
+    }, [isSentenceSuggestEnabled, selectedSentenceRange]);
+
+    useEffect(() => {
+        console.log("Suggested sentences updated:", suggestedSentences);
+    }, [suggestedSentences]);
 
     const sharedStyles: CSSProperties = {
         padding: "8px",
@@ -381,7 +420,9 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
                     onPaste={handlePaste}
                     onKeyUp={() => { updateCursor(); updateAnchor(); }}
                     onMouseUp={() => { updateCursor(); updateAnchor(); }}
-                />
+                >
+                    {loading ? <CircularProgress size={60}/> : null}
+                </Box>
                 {showDiff && diff && (
                 <Box
                     sx={{
@@ -418,7 +459,7 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
             )}
             <style>{`
                 .highlight-word {
-                    background-color: rgba(255, 235, 59, 0.4);
+                    background-color: rgba(255, 0, 59, 0.4);
                 }
                 .highlight-sentence {
                     background-color: rgba(255, 193, 7, 0.4);
@@ -432,8 +473,8 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
                 `}
             </style>
         </Box>
-        <TailoringPopper values={suggestedSentences} hidden={suggestedSentences.length === 0} anchorEl={anchorEl} onValueClick={(value: string) => {replaceSelectedSentence(value);}} onClose={() => {setAnchorEl(null); setSuggestedSentences([]);}}/>
-        <TailoringPopper values={suggestedSynonyms} hidden={suggestedSynonyms.length === 0} anchorEl={anchorEl} onValueClick={(value: string) => {replaceSelectedWord(value);}} onClose={() => {setAnchorEl(null); setSuggestedSynonyms([]);}}/>
+        <TailoringPopper values={suggestedSentences} hidden={!isSentenceSuggestEnabled} anchorEl={anchorEl} onValueClick={(value: string) => {replaceSelectedSentence(value);}} onClose={() => {setAnchorEl(null); setSuggestedSentences([]);}} loading={isSentencesLoading}/>
+        <TailoringPopper values={suggestedSynonyms} hidden={suggestedSynonyms.length === 0} anchorEl={anchorEl} onValueClick={(value: string) => {replaceSelectedWord(value);}} onClose={() => {setAnchorEl(null); setSuggestedSynonyms([]);}} />
     </>
     );
 }

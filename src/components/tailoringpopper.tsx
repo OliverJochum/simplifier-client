@@ -1,7 +1,9 @@
 import Popper from "@mui/material/Popper";
 import type { VirtualAnchor } from "./iotextbox"
-import { ClickAwayListener, IconButton, ListItemButton, ListItemText, Stack } from "@mui/material";
+import { IconButton, ListItemButton, ListItemText, Stack } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import CircularProgress from '@mui/material/CircularProgress'
+import { useEffect } from "react";
 
 type TailoringItemProps = {
     value: string;
@@ -14,6 +16,7 @@ type TailoringPopperProps = {
     anchorEl?: HTMLElement | VirtualAnchor | null;
     onValueClick?: (value: string) => void;
     onClose?: () => void;
+    loading?: boolean;
 }
 
 function TailoringItem({ value, onClick }: TailoringItemProps) {
@@ -26,13 +29,8 @@ function TailoringItem({ value, onClick }: TailoringItemProps) {
     );
 }
 
-function TailoringPopper({ values, hidden, anchorEl, onValueClick, onClose }: TailoringPopperProps) {
+function TailoringPopper({ values, hidden, anchorEl, onValueClick, onClose, loading }: TailoringPopperProps) {
     return (
-        <ClickAwayListener
-            onClickAway={() => {
-                onClose?.();
-            }}
-        >
             <Popper open={!!anchorEl && !hidden} anchorEl={anchorEl} placement="bottom-start" sx={{maxWidth: 400, fontSize: 12, backgroundColor: 'background.paper', boxShadow: 3, zIndex: 1300}}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{padding: "5px 10px", borderBottom: "1px solid #ccc"}}>
                     <p style={{padding: "10px", fontWeight: "bold"}}>Here are some alternative options:</p>
@@ -40,11 +38,10 @@ function TailoringPopper({ values, hidden, anchorEl, onValueClick, onClose }: Ta
                         <CloseIcon />
                     </IconButton>
                 </Stack>
-                {values.map((value, idx) => (
+                {loading ? <CircularProgress size={60} /> : values.map((value, idx) => (
                     <TailoringItem key={idx} value={value} onClick={onValueClick} />
                 ))}
             </Popper>
-        </ClickAwayListener>
     );
 }
 

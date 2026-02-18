@@ -36,7 +36,7 @@ function SessionBox(props: SessionBoxProps) {
         sessionManager?.initializeForUser(userId);
     }
 
-    const handleChange = (event: SelectChangeEvent<number>) => {
+    const handleChange = async (event: SelectChangeEvent<number>) => {
         const session = sessions?.find(
             s => s.id === Number(event.target.value)
         );
@@ -46,7 +46,7 @@ function SessionBox(props: SessionBoxProps) {
             optionManager?.setSessionModeEnabled(true);
             sessionManager?.setSnapshotToPopulate(null);
         }
-        callSessionsForUser(ownerId!);
+        await callSessionsForUser(ownerId!);
     };
 
     const handleCreateNewSession = async (name: string) => {

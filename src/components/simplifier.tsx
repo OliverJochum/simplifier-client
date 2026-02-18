@@ -8,6 +8,7 @@ import { analyzeService } from "../services/analyze_service";
 import { sessionService, calculateDiff, DiffProps} from "../services/session_service";
 import { useOwnerId, useSelectedCtxtRetentionScores, useSelectedLegibilityScores, useSelectedModel, useSelectedSessionId, useSessionModeEnabled, useShowDiff, useSnapshotToPopulate } from "../services/option_manager_hooks";
 import SessionManager from "../services/session_manager";
+import { Button } from "@mui/material";
 
 type SimplifierProps = {
     optionManager?: OptionManager;
@@ -46,6 +47,8 @@ const Simplifier = forwardRef<SimplifierHandle, SimplifierProps>((props, ref) =>
     const snapshotToPopulate = useSnapshotToPopulate(sessionManager!);
     const showDiff = useShowDiff(sessionManager!);
     const selectedModel = useSelectedModel(optionManager!);
+
+    const [simplifyLoading, setSimplifyLoading] = useState(false);
 
     const updateOutputSetterRef = (val: string, source: SystemIntent, diff?: DiffProps[]) => {
         outputSetterRef.current?.(val, source, diff);
@@ -94,8 +97,12 @@ const Simplifier = forwardRef<SimplifierHandle, SimplifierProps>((props, ref) =>
     }));
 
     const handleSimplify = () => {
-        simplifyService.callSimplifyGenTxt(textInTextAreas.input, selectedModel!).then(res => updateOutputSetterRef(res, "commit")).catch(err => {
+        setSimplifyLoading(true);
+        simplifyService.callSimplifyGenTxt(textInTextAreas.input, selectedModel!)
+        .then(res => updateOutputSetterRef(res, "commit")).catch(err => {
             console.error("Error simplifying text:", err);
+        }).finally(() => {
+            setSimplifyLoading(false);
         });
     };
 
@@ -262,11 +269,12 @@ const Simplifier = forwardRef<SimplifierHandle, SimplifierProps>((props, ref) =>
                             model={selectedModel!} 
                             optionManager={optionManager} 
                             sessionManager={sessionManager}
+                            loading={simplifyLoading}
                         />
                     </Grid>
                 </Grid>
             </div>
-            <button id="simplifyButton" onClick={handleSimplify}>Simplify</button>
+            <Button variant="outlined" id="simplifyButton" onClick={handleSimplify}>Simplify</Button>
         </div>
     );
 });
