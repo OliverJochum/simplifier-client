@@ -67,6 +67,8 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
     const isComplexWordsEnabled = useComplexWordsEnabled(optionManager!);
     const showDiff = useShowDiff(sessionManager!);
 
+    const isCMDPressedRef = useRef(false);
+
     const [cursor, setCursor] = useState({
         start: 0,
         end: 0,
@@ -76,6 +78,22 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
     const virtualAnchorRef = useRef<VirtualAnchor | null>(null);
 
     // effects 
+
+    useEffect(() => {
+        const down = (e: KeyboardEvent) => {
+            if (e.key === "Meta") isCMDPressedRef.current = true;
+        }
+        const up = (e: KeyboardEvent) => {
+            if (e.key === "Meta") isCMDPressedRef.current = false;
+        }
+        window.addEventListener("keydown", down);
+        window.addEventListener("keyup", up);
+        
+        return () => {
+            window.removeEventListener("keydown", down);
+            window.removeEventListener("keyup", up);
+        };
+    },[]);
 
     useEffect(() => {
         virtualAnchorRef.current = {
@@ -190,7 +208,7 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
     // api calls
     // if sentence suggestion enabled, call sentence suggestion API
     useEffect(() => {
-        if (!isSentenceSuggestEnabled || !sentenceAPICallback || !selectedSentenceRange || model === undefined) {
+        if (!isSentenceSuggestEnabled || !sentenceAPICallback || !selectedSentenceRange || model === undefined || !isCMDPressedRef.current) {
             return;
         }
         const sentence = text.slice(selectedSentenceRange.start,selectedSentenceRange.end);
@@ -213,7 +231,7 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
     // if synonym mode enabled, call synonym API
     useEffect( () => {
         async function fetchSynonyms() {
-            if (!isSynonymModeEnabled || !selectedWordRange || !selectedSentenceRange || model === undefined) return;
+            if (!isSynonymModeEnabled || !selectedWordRange || !selectedSentenceRange || model === undefined || !isCMDPressedRef.current) return;
             
             const word = text.slice(selectedWordRange.start,selectedWordRange.end);
             const sentence = text.slice(selectedSentenceRange.start,selectedSentenceRange.end);
