@@ -15,7 +15,7 @@ function Scorecard({ label, scores }: ScorecardProps) {
             <Paper variant="outlined" elevation={2} >
                 <Stack direction="row" spacing={2} alignItems="center">
                     {scores.map((score, index) => (
-                        <Score key={index} name={score.name} value={score.value}  />
+                        <Score key={index} name={score.name} value={score.value} label={score.label} />
                     ))}
                 </Stack>
             </Paper> 

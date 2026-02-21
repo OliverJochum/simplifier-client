@@ -33,9 +33,9 @@ const Simplifier = forwardRef<SimplifierHandle, SimplifierProps>((props, ref) =>
     const [textCommittedByUser, setTextCommittedByUser] = useState({ input: "", output: "" });
     const [currentPreview, setCurrentPreview] = useState({ input: "", output: "" });
 
-    const [inputScores, setInputScores] = useState<{ [key: string]: number | 0 }>({});
-    const [outputScores, setOutputScores] = useState<{ [key: string]: number | 0 }>({});
-    const [ctxtRetentionScores, setCtxtRetentionScores] = useState<{ [key: string]: number | 0 }>({});
+    const [inputScores, setInputScores] = useState<{ [key: string]: { value: number; label: string } }>({});
+    const [outputScores, setOutputScores] = useState<{ [key: string]: { value: number; label: string } }>({});
+    const [ctxtRetentionScores, setCtxtRetentionScores] = useState<{ [key: string]: { value: number; label: string } }>({});
     const inputSetterRef = useRef<(val: string, source: SystemIntent, diff?: DiffProps[]) => void>(() => { });
     const outputSetterRef = useRef<(val: string, source: SystemIntent, diff?: DiffProps[]) => void>(() => { });
 
@@ -106,27 +106,36 @@ const Simplifier = forwardRef<SimplifierHandle, SimplifierProps>((props, ref) =>
         });
     };
 
-    const handleReadabilityScore = async (scoreType: string, text: string): Promise<number> => {
-        if (!text || text.trim() === "") return 0;
+    const handleReadabilityScore = async (scoreType: string, text: string): Promise<{ value: number; label: string }> => {
+        if (!text || text.trim() === "") return { value: 0, label: "" };
         try {
-            const res = await analyzeService.callGetReadabilityScore(scoreType, text);
+            const res = await analyzeService.callGetReadabilityScore(scoreType, text) as Record<number, string>;
             console.log(`Fetched score (${scoreType}):`, res);
-            return res;
+            const [score, label] = Object.entries(res)[0] ?? [0, ""];
+            return {
+                value: Number(score),
+                label: label
+            };
         } catch (err) {
             console.error(`Error fetching score (${scoreType}):`, err);
-            return 0; // fallback if API fails
+            return { value: 0, label: "" }; // fallback if API fails
         }
     };
 
-    const handleCtxtRetentionScore = async (scoreType: string, candidateText: string, referenceText: string): Promise<number> => {
-        if (!candidateText || candidateText.trim() === "" || !referenceText || referenceText.trim() === "") return 0;
+    const handleCtxtRetentionScore = async (scoreType: string, candidateText: string, referenceText: string): Promise<{ value: number; label: string }> => {
+        if (!candidateText || candidateText.trim() === "" || !referenceText || referenceText.trim() === "") return { value: 0, label: "" };
         try {
-            const res = await analyzeService.callGetCtxtRetentionScore(scoreType, candidateText, referenceText);
+            const res = await analyzeService.callGetCtxtRetentionScore(scoreType, candidateText, referenceText) as Record<number, string>;
             console.log(`Fetched context retention score (${scoreType}):`, res);
-            return res;
+            const [score, label] = Object.entries(res)[0] ?? [0, ""];
+
+            return {
+                value: Number(score),
+                label: label
+            };
         } catch (err) {
             console.error(`Error fetching context retention score (${scoreType}):`, err);
-            return 0;
+            return { value: 0, label: "" };
         }
     }
 
@@ -134,10 +143,11 @@ const Simplifier = forwardRef<SimplifierHandle, SimplifierProps>((props, ref) =>
         const fetchInputLegibilityScores = async () => {
             const scores = selectedLegibilityScores;
             const results = await Promise.all(scores.map(score => handleReadabilityScore(score, textInTextAreas.input)));
-            const newScores: Record<string, number> = {};
+            const newScores: Record<string, { value: number; label: string }> = {};
             scores.forEach((score, i) => {
                 newScores[score] = results[i];
             });
+            console.log("Input legibility scores updated:", newScores);
             setInputScores(newScores);
         };
         fetchInputLegibilityScores();
@@ -147,7 +157,7 @@ const Simplifier = forwardRef<SimplifierHandle, SimplifierProps>((props, ref) =>
         const fetchOutputLegibilityScores = async () => {
             const scores = selectedLegibilityScores;
             const results = await Promise.all(scores.map(score => handleReadabilityScore(score, textInTextAreas.output)));
-            const newScores: Record<string, number> = {};
+            const newScores: Record<string, { value: number; label: string }> = {};
             scores.forEach((score, i) => {
                 newScores[score] = results[i];
             });
@@ -159,8 +169,8 @@ const Simplifier = forwardRef<SimplifierHandle, SimplifierProps>((props, ref) =>
     useEffect(() => {
         const fetchCtxtRetentionScores = async () => {
             const scores = selectedCtxtRetentionScores;
-            const results = await Promise.all(scores.map(score => handleCtxtRetentionScore(score, textInTextAreas.output, textInTextAreas.input)));
-            const newScores: Record<string, number> = {};
+            const results = await Promise.all(scores.map(score => handleCtxtRetentionScore(score, textInTextAreas.output, textInTextAreas.input))) as { value: number; label: string }[];
+            const newScores: Record<string, { value: number; label: string }> = {};
             scores.forEach((score, i) => {
                 newScores[score] = results[i];
             });
@@ -243,7 +253,7 @@ const Simplifier = forwardRef<SimplifierHandle, SimplifierProps>((props, ref) =>
             <div>
                 <Grid container spacing={1} sx={{ marginBottom: 1 }}>
                     <Grid size={6}>
-                        <Scorecard label="Legibility" scores={Object.entries(inputScores).map(([name, value]) => ({ name, value: value || 0 })) || []} />
+                        <Scorecard label="Legibility" scores={Object.entries(inputScores).map(([name, attrs]: [string, { value: number; label: string }]) => ({ name: name, value: attrs.value || 0, label: attrs.label ?? "" })) || []} />
                         <IOTextBox 
                             textChangeWithinTextareaCallback={handleTextInInputAreaChange} 
                             setTextFromParent={(setter: (val: string, source: SystemIntent, diff?: DiffProps[]) => void) => {inputSetterRef.current = setter; }} 
@@ -256,10 +266,10 @@ const Simplifier = forwardRef<SimplifierHandle, SimplifierProps>((props, ref) =>
                     <Grid size={6}>
                         <Grid container spacing={1} sx={{ marginBottom: 1 }}>
                             <Grid size={3}>
-                                <Scorecard label="Context retention" scores={Object.entries(ctxtRetentionScores).map(([name, value]) => ({ name, value: value || 0 })) || []} />
+                                <Scorecard label="Context retention" scores={Object.entries(ctxtRetentionScores).map(([name, attrs]: [string, { value: number; label: string }]) => ({ name: name, value: attrs.value || 0, label: attrs.label ?? "" })) || []} />
                             </Grid>
                             <Grid size={3}>
-                                <Scorecard label="Legibility" scores={Object.entries(outputScores).map(([name, value]) => ({ name, value: value || 0 })) || []} />
+                                <Scorecard label="Legibility" scores={Object.entries(outputScores).map(([name, attrs]: [string, { value: number; label: string }]) => ({ name: name, value: attrs.value || 0, label: attrs.label ?? "" })) || []} />
                             </Grid>
                         </Grid>
                         <IOTextBox 
