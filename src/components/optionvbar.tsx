@@ -33,7 +33,6 @@ function OptionVBar ({ optionManager }: OptionVBarProps) {
                 <FormLabel component="legend">Analysis</FormLabel>
                 <FormControlLabel control={<Switch checked={complexWordsEnabled} onChange={(e) => optionManager?.setComplexWordsEnabled(e.target.checked)} />} label="Complex words" labelPlacement="start" />
                 <FormControlLabel control={<Switch checked={complexSentencesEnabled} onChange={(e) => optionManager?.setComplexSentencesEnabled(e.target.checked)} />} label="Complex sentences" labelPlacement="start" />
-                <Button variant="outlined">Scores</Button>
             </FormGroup>
             <FormGroup>
                 <FormLabel component="legend">Tailoring</FormLabel>
