@@ -7,6 +7,7 @@ import SessionBox from '../components/sessionbox';
 import SessionManager from '../services/session_manager';
 import { useRef } from 'react';
 import { useOwnerId } from '../services/option_manager_hooks';
+import SettingsBox from '../components/settingsbox';
 
 
 
@@ -16,8 +17,8 @@ function MainView() {
             sentenceSuggestEnabled: false,
             synonymModeEnabled: false ,
             showSessionBox: false,
-            selectedLegibilityScores: ['fre', 'wstf'],
-            selectedCtxtRetentionScores: ['bertscore'],
+            selectedLegibilityScores: [],
+            selectedCtxtRetentionScores: [],
             selectedSessionId: undefined,
             ownerId: 1,
             sessionModeEnabled: false,
@@ -54,6 +55,7 @@ function MainView() {
                     <OptionVBar optionManager={optionManager} />
                     <SessionBox optionManager={optionManager} sessionManager={sessionManager} onClose={handleSessionBoxClose} onCommit={handleCommitSnapshot}/>
                 </Grid>
+                <SettingsBox optionManager={optionManager} />
             </Grid>
         </Box>
     );

@@ -100,6 +100,27 @@ function useSelectedModel(optionManager: OptionManager) {
     );
 }
 
+function useShowSettingsBox(optionManager: OptionManager) {
+    return useSyncExternalStore(
+        optionManager.subscribe.bind(optionManager),
+        () => optionManager.isShowSettingsBox()
+    );
+}
+
+function useAvailableScores(optionManager: OptionManager) {
+    return useSyncExternalStore(
+        optionManager.subscribe.bind(optionManager),
+        () => optionManager.getAvailableScores()
+    );
+}
+
+function useSelectedScores(optionManager: OptionManager) {
+    return useSyncExternalStore(
+        optionManager.subscribe.bind(optionManager),
+        () => optionManager.getSelectedScores()
+    );
+}
+
 export { 
     useSentenceSuggestEnabled,
     useSynonymModeEnabled, 
@@ -112,5 +133,8 @@ export {
     useShowDiff,
     useComplexSentencesEnabled,
     useComplexWordsEnabled,
-    useSelectedModel
+    useSelectedModel,
+    useShowSettingsBox,
+    useAvailableScores,
+    useSelectedScores
 };

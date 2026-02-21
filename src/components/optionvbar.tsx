@@ -5,6 +5,7 @@ import FormGroup from '@mui/material/FormGroup';
 import FormLabel from '@mui/material/FormLabel';
 import Switch from '@mui/material/Switch';
 import OptionManager from '../services/option_manager';
+import SettingsIcon from "@mui/icons-material/Settings";
 import { useComplexSentencesEnabled, useComplexWordsEnabled, useSentenceSuggestEnabled, useSynonymModeEnabled } from '../services/option_manager_hooks';
 
 type OptionVBarProps = {
@@ -23,7 +24,11 @@ function OptionVBar ({ optionManager }: OptionVBarProps) {
     const complexWordsEnabled = useComplexWordsEnabled(optionManager!);
     
     return (
-        <Box component="section" sx={{ border: '1px solid black', borderRadius: 1, width: 200, bgcolor: 'background.paper', padding: 1 }}>
+        <>
+        <Button variant="contained" color="primary" startIcon={<SettingsIcon />} onClick={() => optionManager?.setShowSettingsBox(true)}>
+            Settings
+        </Button>
+        <Box component="section" sx={{ border: '1px solid black', borderRadius: 1, width: '100%', maxWidth: 200, bgcolor: 'background.paper', padding: 1 }}>
             <FormGroup>
                 <FormLabel component="legend">Analysis</FormLabel>
                 <FormControlLabel control={<Switch checked={complexWordsEnabled} onChange={(e) => optionManager?.setComplexWordsEnabled(e.target.checked)} />} label="Complex words" labelPlacement="start" />
@@ -43,6 +48,7 @@ function OptionVBar ({ optionManager }: OptionVBarProps) {
             </FormGroup>
 
         </Box>
+        </>
     );
 }
 

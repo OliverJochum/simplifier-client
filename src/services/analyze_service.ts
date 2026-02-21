@@ -16,5 +16,9 @@ export const analyzeService = {
     callGetComplexSentences: async (text: string) => {
         const response = await api.get(`/analyze/complex_sentences`, {params: { text: text, threshold: 30 }})
         return response.data;
+    },
+    callGetAvailableScores: async () => {
+        const response = await api.get(`/analyze/available_scores`)
+        return response.data;
     }
 }

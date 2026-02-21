@@ -1,3 +1,7 @@
+import { ScoreType } from "../utils/constants";
+import { analyzeService } from "./analyze_service";
+import { userService } from "./user_service";
+
 type OptionManagerProps = {
     sentenceSuggestEnabled?: boolean;
     synonymModeEnabled?: boolean;
@@ -10,6 +14,7 @@ type OptionManagerProps = {
     complexSentencesEnabled?: boolean;
     complexWordsEnabled?: boolean;
     selectedModel?: string;
+    showSettingsBox?: boolean;
 };
 
 type Listener = () => void;
@@ -26,6 +31,10 @@ class OptionManager {
     private complexSentencesEnabled = false;
     private complexWordsEnabled = false;
     private selectedModel: string | undefined;
+    private selectedScores: Map<string, ScoreType> = new Map();
+    private showSettingsBox = false;
+    private availableScores: Map<string, ScoreType> = new Map();
+
 
     private listeners = new Set<Listener>();
 
@@ -52,18 +61,36 @@ class OptionManager {
         complexSentencesEnabled,
         complexWordsEnabled,
         selectedModel,
+        showSettingsBox,
     }: OptionManagerProps) {
         if (sentenceSuggestEnabled !== undefined) this.sentenceSuggestEnabled = sentenceSuggestEnabled;
         if (synonymModeEnabled !== undefined) this.synonymModeEnabled = synonymModeEnabled;
         if (showSessionBox !== undefined) this.showSessionBox = showSessionBox;
         if (selectedLegibilityScores) this.selectedLegibilityScores = selectedLegibilityScores;
         if (selectedCtxtRetentionScores) this.selectedCtxtRetentionScores = selectedCtxtRetentionScores;
+        if (showSettingsBox !== undefined) this.showSettingsBox = showSettingsBox;
         if (selectedSessionId !== undefined) this.selectedSessionId = selectedSessionId;
         if (ownerId !== undefined) this.ownerId = ownerId;
         if (sessionModeEnabled !== undefined) this.sessionModeEnabled = sessionModeEnabled;
         if (complexSentencesEnabled !== undefined) this.complexSentencesEnabled = complexSentencesEnabled;
         if (complexWordsEnabled !== undefined) this.complexWordsEnabled = complexWordsEnabled;
         if (selectedModel !== undefined) this.selectedModel = selectedModel;
+        this.initializeAvailableScores();
+    }
+
+    async initializeAvailableScores() {
+        const availableScores = await analyzeService.callGetAvailableScores() as Record<string, ScoreType>;
+        const availableScoreMap = new Map(Object.entries(availableScores));
+
+        await userService.callGetUser(this.ownerId!).then(user => {
+            this.selectedScores = new Map(Object.entries(user.selectedScores).filter(([score]) => availableScoreMap.has(score)) as [string, ScoreType][]);
+        });
+        console.log("Available scores initialized:", this.selectedScores);
+
+        this.selectedLegibilityScores = Array.from(this.selectedScores.entries()).filter(([_, type]) => type === "READABILITY").map(([score, _]) => score);
+        this.selectedCtxtRetentionScores = Array.from(this.selectedScores.entries()).filter(([_, type]) => type === "CONTEXT_RETENTION").map(([score, _]) => score);
+        this.availableScores = availableScoreMap;
+        this.notify();
     }
 
     setSentenceSuggestEnabled(enabled: boolean) {
@@ -119,6 +146,17 @@ class OptionManager {
 
     isShowSessionBox(): boolean {
         return this.showSessionBox;
+    }
+
+    setShowSettingsBox(show: boolean) {
+        if (this.showSettingsBox !== show) {
+            this.showSettingsBox = show;
+            this.notify();
+        }
+    }
+
+    isShowSettingsBox(): boolean {
+        return this.showSettingsBox;
     }
 
     setSelectedSessionId(sessionId: number | undefined) {
@@ -185,6 +223,24 @@ class OptionManager {
 
     getSelectedModel(): string | undefined {
         return this.selectedModel;
+    }
+
+    setAvailableScores(scores: Map<string, ScoreType>) {
+        this.availableScores = scores;
+        this.notify();
+    }
+
+    getAvailableScores(): Map<string, ScoreType> {
+        return this.availableScores;
+    }
+
+    setSelectedScores(scores: Map<string, ScoreType>) {
+        this.selectedScores = scores;
+        this.notify();
+    }
+
+    getSelectedScores(): Map<string, ScoreType> {
+        return this.selectedScores;
     }
 }
 

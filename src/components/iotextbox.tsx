@@ -404,7 +404,7 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
 
     return (
         <>
-            <Box position="relative" width="600px" sx={{ border: "1px solid #ccc", borderRadius: 4 }} overflow="hidden">
+            <Box position="relative" sx={{ width: "100%", maxWidth: 600,border: "1px solid #ccc", borderRadius: 4 }} overflow="hidden">
                 <OverlayBox sharedStyles={sharedStyles} dangerouslySetInnerHTML={{__html: highlightRanges(text, complexWordRanges, "underline-sentence")}}/>
                 <OverlayBox sharedStyles={sharedStyles} dangerouslySetInnerHTML={{__html: highlightRanges(text, complexSentenceRanges, "underline-sentence")}}/> 
                 <OverlayBox sharedStyles={sharedStyles} dangerouslySetInnerHTML={{__html: highlightRanges(text, selectedSentenceRange ? [selectedSentenceRange] : null, "highlight-sentence")}}/>

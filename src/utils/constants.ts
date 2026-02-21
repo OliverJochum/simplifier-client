@@ -3,4 +3,6 @@ const SCORES = [
     {type: "WSTF", name: "Wiener Sachtextformel"},
 ];
 
-export { SCORES };
+type ScoreType = "READABILITY" | "CONTEXT_RETENTION";
+
+export { SCORES, type ScoreType };
