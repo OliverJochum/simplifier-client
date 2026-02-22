@@ -10,6 +10,11 @@ type ScoreSelectionBoxProps = {
     availableScores?: Map<string, ScoreType>; 
 }
 
+
+/**
+ * 
+ * Tab within settings for selecting which scores to use from the available ones (provided by server).
+ */
 function ScoreSelectionBox(props: ScoreSelectionBoxProps) {
     const { optionManager, availableScores } = props;
 

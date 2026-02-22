@@ -17,6 +17,11 @@ type SessionBoxProps = {
     onCommit: () => void;
 }
 
+
+/**
+ * 
+ * Displays sessions for a user
+ */
 function SessionBox(props: SessionBoxProps) {
     const { optionManager, sessionManager, onClose, onCommit } = props;
     

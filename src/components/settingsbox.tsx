@@ -9,6 +9,11 @@ type SettingsBoxProps = {
     onClose?: () => void;
 }
 
+
+/**
+ * 
+ * Settings dialog for configuring scores and (in the future) models and api keys.
+ */
 function SettingsBox(props: SettingsBoxProps) {
     const { optionManager, onClose } = props;
 

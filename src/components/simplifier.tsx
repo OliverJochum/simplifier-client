@@ -23,6 +23,10 @@ export type SimplifierHandle = {
 // preview means a change in textbox not yet finalized by user (snapshot preview)
 export type SystemIntent = "commit" | "preview";
 
+
+/**
+ * Simplifier groups text boxes with simplify button and scores
+ */
 const Simplifier = forwardRef<SimplifierHandle, SimplifierProps>((props, ref) => {
     const { optionManager, sessionManager } = props;
     // values for whats in the textboxes

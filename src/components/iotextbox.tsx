@@ -34,6 +34,8 @@ type IOTextBoxProps = {
  * @param sentenceAPICallback Callback to fetch sentence suggestions/simplifications
  * @param model AI Model to use for sentence suggestions/simplifications
  * @param optionManager OptionManager to get settings from Option vertical bar
+ * @param sessionManager SessionManager responsible for the current session
+ * @param loading Whether the text box is in a loading state (e.g. waiting text generation from API)
  * @return IOTextBox component
  */
 function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, sentenceAPICallback, model, optionManager, sessionManager, loading }: IOTextBoxProps) {

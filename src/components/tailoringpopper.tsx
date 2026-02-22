@@ -29,6 +29,11 @@ function TailoringItem({ value, onClick }: TailoringItemProps) {
     );
 }
 
+/**
+ * 
+ * Popper for tailoring interactions, such as sentence suggestions or synonym suggestions. Anchors to the text that is being tailored.
+ */
+
 function TailoringPopper({ values, hidden, anchorEl, onValueClick, onClose, loading }: TailoringPopperProps) {
     return (
             <Popper open={!!anchorEl && !hidden} anchorEl={anchorEl} placement="bottom-start" sx={{maxWidth: 400, fontSize: 12, backgroundColor: 'background.paper', boxShadow: 3, zIndex: 1300}}>

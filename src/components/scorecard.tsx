@@ -8,6 +8,11 @@ type ScorecardProps = {
     scores: Array<ScoreProps>;
 }
 
+
+/**
+ * 
+ * Renders scores
+ */
 function Scorecard({ label, scores }: ScorecardProps) {
     return (
         <div>

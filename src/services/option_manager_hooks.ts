@@ -2,6 +2,8 @@ import { useSyncExternalStore } from "react";
 import OptionManager from "./option_manager";
 import SessionManager from "./session_manager";
 
+// Hooks allow subscribing to specific options/states from option- and session manager so that components can reactively update when they change.
+
 function useSentenceSuggestEnabled(optionManager: OptionManager) {
     return useSyncExternalStore(
         optionManager.subscribe.bind(optionManager),

@@ -14,6 +14,9 @@ export type SessionProps = {
 
 type Listener = () => void;
 
+/**
+ * Responsible for current session of user.
+ */
 class SessionManager {
     private ownerId: number | undefined;
     private sessions: SessionProps[] | undefined;

@@ -4,6 +4,10 @@ export type ScoreProps = {
     label: string;
 }
 
+/**
+ * 
+ * Renders a calculated score with name and a provided label (e.g. "difficult" for a certain FRE score)
+ */
 function Score({ name, value, label }: ScoreProps) {
 
     return (

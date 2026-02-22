@@ -7,6 +7,10 @@ type OverlayBoxProps = {
   dangerouslySetInnerHTML: { __html: string };
 };
 
+/**
+ * 
+ * Div responsible for rendering an overlay such as highlighting selections or marking complicated words/sentences.
+ */
 function OverlayBox ({ sharedStyles, dangerouslySetInnerHTML }: OverlayBoxProps ) {
         return (
             <Box

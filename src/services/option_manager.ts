@@ -19,6 +19,9 @@ type OptionManagerProps = {
 
 type Listener = () => void;
 
+/**
+ * Responsible for managing options that transcend across components
+ */
 class OptionManager {
     private sentenceSuggestEnabled = false;
     private synonymModeEnabled = false;
