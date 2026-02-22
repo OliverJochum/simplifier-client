@@ -128,7 +128,7 @@ function SessionBox(props: SessionBoxProps) {
             <FormControlLabel control={<Switch checked={showDiff} onChange={(e) => sessionManager?.setShowDiff(e.target.checked)} />} label="Show Diff" />
             <Button variant="contained" size="small" onClick={onCommit} disabled={!selectedSession}>Restore snapshot</Button>
             <List>
-                {selectedSession?.snapshots.map((snapshot, index) => {
+                {[...(selectedSession?.snapshots ?? [])].sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime()).map((snapshot, index) => {
                     const isActive = snapshotToPopulate?.datetime === snapshot.datetime;
                     return (
                         <ListItemButton
