@@ -67,7 +67,8 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
     const isComplexWordsEnabled = useComplexWordsEnabled(optionManager!);
     const showDiff = useShowDiff(sessionManager!);
 
-    const isCMDPressedRef = useRef(false);
+    const [sentencePopperOpen, setSentencePopperOpen] = useState(false);
+    const [synonymPopperOpen, setSynonymPopperOpen] = useState(false);
 
     const [cursor, setCursor] = useState({
         start: 0,
@@ -80,20 +81,35 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
     // effects 
 
     useEffect(() => {
-        const down = (e: KeyboardEvent) => {
-            if (e.key === "Meta") isCMDPressedRef.current = true;
-        }
-        const up = (e: KeyboardEvent) => {
-            if (e.key === "Meta") isCMDPressedRef.current = false;
-        }
-        window.addEventListener("keydown", down);
-        window.addEventListener("keyup", up);
-        
-        return () => {
-            window.removeEventListener("keydown", down);
-            window.removeEventListener("keyup", up);
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.metaKey && e.key === ".") {
+                e.preventDefault();
+                setSentencePopperOpen(prev => !prev);
+            }
+
+            if (e.metaKey && e.key === ",") {
+                e.preventDefault();
+                setSynonymPopperOpen(prev => !prev);
+            }
         };
-    },[]);
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, []);
+
+    useEffect(() => {
+        if (!isSentenceSuggestEnabled) {
+            setSentencePopperOpen(false);
+            setSuggestedSentences([]);
+        }
+    }, [isSentenceSuggestEnabled]);
+
+    useEffect(() => {
+        if (!isSynonymModeEnabled) {
+            setSynonymPopperOpen(false);
+            setSuggestedSynonyms([]);
+        }
+    }, [isSynonymModeEnabled]);
 
     useEffect(() => {
         virtualAnchorRef.current = {
@@ -208,12 +224,13 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
     // api calls
     // if sentence suggestion enabled, call sentence suggestion API
     useEffect(() => {
-        if (!isSentenceSuggestEnabled || !sentenceAPICallback || !selectedSentenceRange || model === undefined || !isCMDPressedRef.current) {
+        if (!sentencePopperOpen || !isSentenceSuggestEnabled || !sentenceAPICallback || !selectedSentenceRange || model === undefined  ) {
             return;
         }
         const sentence = text.slice(selectedSentenceRange.start,selectedSentenceRange.end);
 
         console.log(isSentenceSuggestEnabled);
+        console.log(sentencePopperOpen);
 
         if (!sentence.trim()) return;
 
@@ -226,12 +243,12 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
         }).finally(() => {
             setIsSentencesLoading(false);
         });
-    }, [text,selectedSentenceRange,sentenceAPICallback,model,isSentenceSuggestEnabled,cursor.start]);
+    }, [text, selectedSentenceRange, sentenceAPICallback, model, isSentenceSuggestEnabled, cursor.start, sentencePopperOpen]);
 
     // if synonym mode enabled, call synonym API
     useEffect( () => {
         async function fetchSynonyms() {
-            if (!isSynonymModeEnabled || !selectedWordRange || !selectedSentenceRange || model === undefined || !isCMDPressedRef.current) return;
+            if (!synonymPopperOpen || !isSynonymModeEnabled || !selectedWordRange || !selectedSentenceRange || model === undefined ) return;
             
             const word = text.slice(selectedWordRange.start,selectedWordRange.end);
             const sentence = text.slice(selectedSentenceRange.start,selectedSentenceRange.end);
@@ -250,7 +267,7 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
             }
         }
         fetchSynonyms();
-    }, [text,selectedWordRange,selectedSentenceRange,model,isSynonymModeEnabled,cursor.start]);
+    }, [text, selectedWordRange, selectedSentenceRange, model, isSynonymModeEnabled, cursor.start, synonymPopperOpen]);
 
     // replacement utils
     function replaceSelectedSentence(newSentence: string) {
@@ -491,8 +508,8 @@ function IOTextBox({ textChangeWithinTextareaCallback, setTextFromParent, senten
                 `}
             </style>
         </Box>
-        <TailoringPopper values={suggestedSentences} hidden={!isSentenceSuggestEnabled} anchorEl={anchorEl} onValueClick={(value: string) => {replaceSelectedSentence(value);}} onClose={() => {setAnchorEl(null); setSuggestedSentences([]);}} loading={isSentencesLoading}/>
-        <TailoringPopper values={suggestedSynonyms} hidden={suggestedSynonyms.length === 0} anchorEl={anchorEl} onValueClick={(value: string) => {replaceSelectedWord(value);}} onClose={() => {setAnchorEl(null); setSuggestedSynonyms([]);}} />
+        <TailoringPopper values={suggestedSentences} hidden={!isSentenceSuggestEnabled || !sentencePopperOpen} anchorEl={anchorEl} onValueClick={(value: string) => {replaceSelectedSentence(value); setSentencePopperOpen(false);}} onClose={() => {setSentencePopperOpen(false); setAnchorEl(null); setSuggestedSentences([]);}} loading={isSentencesLoading}/>
+        <TailoringPopper values={suggestedSynonyms} hidden={suggestedSynonyms.length === 0 || !synonymPopperOpen} anchorEl={anchorEl} onValueClick={(value: string) => {replaceSelectedWord(value);}} onClose={() => {setAnchorEl(null); setSuggestedSynonyms([]);}} />
     </>
     );
 }
