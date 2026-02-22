@@ -6,6 +6,7 @@ import { useOwnerId, useSessions, useShowDiff, useShowSessionBox, useSnapshotToP
 import SessionManager, { SessionProps, SnapshotProps } from "../services/session_manager";
 import { sessionService } from "../services/session_service";
 import AddIcon from "@mui/icons-material/Add";
+import RefreshIcon from "@mui/icons-material/Refresh";
 
 
 
@@ -28,7 +29,11 @@ function SessionBox(props: SessionBoxProps) {
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [newSessionName, setNewSessionName] = useState("");
 
-    const [selectedSession, setSelectedSession] = useState<SessionProps | null>(null);
+    const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
+
+    const selectedSession = sessions?.find(
+        s => s.id === selectedSessionId
+    ) ?? null;
 
     const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -41,7 +46,7 @@ function SessionBox(props: SessionBoxProps) {
             s => s.id === Number(event.target.value)
         );
         if (session) {
-            setSelectedSession(session);
+            setSelectedSessionId(session.id);
             optionManager?.setSelectedSessionId(session?.id ?? undefined);
             optionManager?.setSessionModeEnabled(true);
             sessionManager?.setSnapshotToPopulate(null);
@@ -65,6 +70,10 @@ function SessionBox(props: SessionBoxProps) {
         if (!selectedSession) return;
         sessionManager?.setSnapshotToPopulate(snapshot);
     };
+
+    const handleRefresh = async () => {
+        await callSessionsForUser(ownerId!);
+    }
 
     useEffect(() => {
         if (!optionManager) return;
@@ -126,6 +135,7 @@ function SessionBox(props: SessionBoxProps) {
                 </Select>
             </FormControl>
             <FormControlLabel control={<Switch checked={showDiff} onChange={(e) => sessionManager?.setShowDiff(e.target.checked)} />} label="Show Diff" />
+            <Button variant="contained" size="small" onClick={handleRefresh} startIcon={<RefreshIcon />} />
             <Button variant="contained" size="small" onClick={onCommit} disabled={!selectedSession}>Restore snapshot</Button>
             <List>
                 {[...(selectedSession?.snapshots ?? [])].sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime()).map((snapshot, index) => {

@@ -46,6 +46,7 @@ class SessionManager {
     async initializeForUser(userId: number) {
         this.ownerId = userId;
         this.sessions = await sessionService.getSessionsForUser(userId);
+        this.notify();
     }
 
     setSessions(sessions: SessionProps[] | undefined) {
